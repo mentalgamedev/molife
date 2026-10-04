@@ -108,6 +108,23 @@ test_assert(($validatedV9['inventory']['items'][0]['itemId'] ?? null) === 'molig
 test_assert(($validatedV9['inventory']['items'][0]['conditionId'] ?? null) === 'standard', 'v9 starter MoLight Pro should be standard condition');
 test_assert(($validatedV9['inventory']['items'][0]['damage'] ?? null) === 10, 'v9 starter MoLight Pro should deal 10 damage');
 
+$v10State = $v9State;
+$v10State['version'] = 10;
+$v10State['settings']['chillModeEnabled'] = true;
+$v10State['settings']['chillMultiplier'] = 2.0;
+$v10State['metrics'] = [
+    'daily' => [
+        '2026-01-01' => ['mood' => -35],
+        '2026-01-02' => ['mood' => 20, 'actions_completed' => 7],
+    ],
+];
+$validatedV10 = dalli_validate_state($v10State);
+test_assert(($validatedV10['version'] ?? null) === 10, 'v10 emotional-weather state should validate');
+test_assert(($validatedV10['settings']['chillModeEnabled'] ?? null) === true, 'v10 should preserve Chill Mode');
+test_assert(($validatedV10['settings']['chillMultiplier'] ?? null) === 2.0, 'v10 should preserve Chill multiplier');
+test_assert(($validatedV10['metrics']['daily']['2026-01-01']['mood'] ?? null) === -35, 'v10 should preserve negative mood values');
+test_assert(($validatedV10['metrics']['daily']['2026-01-02']['actions_completed'] ?? null) === 7, 'v10 daily metrics should remain generic');
+
 $pdo = dalli_pdo();
 test_assert(dalli_auth_schema_ready($pdo), 'modern auth schema should be detected');
 test_assert(dalli_registration_mode() === 'invite', 'registration mode should default from test config');
