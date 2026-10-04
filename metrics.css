@@ -306,6 +306,14 @@
   vector-effect: non-scaling-stroke;
 }
 
+.metrics-point-cloud {
+  fill: none;
+  stroke: #d8d0ff;
+  stroke-width: 3;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
 .metrics-chart-empty {
   position: absolute;
   inset: 0;
@@ -378,6 +386,10 @@
 }
 
 @media (max-width: 760px) {
+  .metrics-dialog::backdrop {
+    backdrop-filter: none;
+  }
+
   .metrics-dialog {
     width: calc(100vw - 14px);
     max-height: calc(100vh - 14px);
