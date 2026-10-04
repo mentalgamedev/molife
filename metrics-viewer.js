@@ -4,6 +4,7 @@
   const dialog = document.querySelector('#metricsDialog');
   if (!dialog || !window.DalliApp) return;
 
+  const dialogTitle = document.querySelector('#metricsDialogTitle');
   const metricSelect = document.querySelector('#metricsMetricSelect');
   const rangeButtons = [...document.querySelectorAll('[data-metrics-range]')];
   const customRange = document.querySelector('#metricsCustomRange');
@@ -133,8 +134,10 @@
 
     let start = isDateKey(customStart?.value) ? customStart.value : addDays(today, -29);
     let end = isDateKey(customEnd?.value) ? customEnd.value : today;
-    if (end > today) end = today;
     if (start > end) [start, end] = [end, start];
+    if (end > today) end = today;
+    if (start > today) start = today;
+    if (start > end) start = end;
 
     let clipped = false;
     const earliestAllowed = addDays(end, -(MAX_CUSTOM_DAYS - 1));
@@ -214,9 +217,10 @@
 
     chart.replaceChildren();
 
-    const viewWidth = 900;
-    const viewHeight = 360;
-    const left = 92;
+    const compact = window.matchMedia('(max-width: 600px)').matches;
+    const viewWidth = compact ? 640 : 900;
+    const viewHeight = compact ? 420 : 360;
+    const left = compact ? 84 : 92;
     const right = 24;
     const top = 26;
     const bottom = 54;
@@ -224,7 +228,9 @@
     const plotHeight = viewHeight - top - bottom;
 
     chart.setAttribute('viewBox', `0 0 ${viewWidth} ${viewHeight}`);
-    chart.setAttribute('preserveAspectRatio', 'none');
+    chart.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    chart.style.aspectRatio = `${viewWidth} / ${viewHeight}`;
+    if (dialogTitle) dialogTitle.textContent = `${metric.label} Data Terminal`;
 
     metric.ticks.forEach(tick => {
       const y = yFor(tick.value, metric, top, plotHeight);
@@ -398,6 +404,10 @@
   dialog.addEventListener('click', event => {
     if (event.target === dialog) closeMetrics();
   });
+
+  window.addEventListener('resize', () => {
+    if (dialog.open) renderGraph();
+  }, { passive: true });
 
   window.MoLifeMetrics = Object.freeze({
     open: openMetric,
