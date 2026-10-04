@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const STATE_VERSION = 9;
+  const STATE_VERSION = 10;
   const TEMPLATE_VERSION = 1;
   const ITEM_DROP_CHANCE = 0.40;
   const ITEM_CAPACITY = 8;
@@ -13,6 +13,13 @@
   const CATEGORY_RESISTANCE = Object.freeze([1, 0.65, 0.40, 0.25]);
   const DEFAULT_FOCUS_FACTOR = 1.5;
   const DEFAULT_RESISTANCE_BUILDUP = 0.75;
+  const DEFAULT_CHILL_MULTIPLIER = 2;
+  const CHILL_MULTIPLIER_MIN = 1.25;
+  const CHILL_MULTIPLIER_MAX = 4;
+  const DAILY_METRIC_LIMIT = 3660;
+  const MOOD_MIN = -100;
+  const MOOD_MAX = 100;
+  const MOOD_STEP = 5;
   const REQUIRED_COUNT_MAX = 1000;
   const VICTORY_XP = 20;
   const COMBO_MIN_MULTIPLIER = 1.05;
@@ -178,6 +185,8 @@
       focusCategoryId: 'work',
       focusFactor: DEFAULT_FOCUS_FACTOR,
       resistanceBuildup: DEFAULT_RESISTANCE_BUILDUP,
+      chillModeEnabled: false,
+      chillMultiplier: DEFAULT_CHILL_MULTIPLIER,
       categories: [
         { id: 'wellbeing', name: 'Wellbeing', icon: '♥', color: '#49d89b' },
         { id: 'work', name: 'Work', icon: '◆', color: '#818bff' },
@@ -210,6 +219,9 @@
       items: []
     },
     oneOffs: [],
+    metrics: {
+      daily: {}
+    },
     current: {
       date: '',
       maxHp: 0,
@@ -923,9 +935,50 @@
     return migrated;
   }
 
+  function migrateV9State(candidate) {
+    const migrated = deepClone(candidate);
+    migrated.version = STATE_VERSION;
+    migrated.settings = {
+      ...(migrated.settings || {}),
+      chillModeEnabled: false,
+      chillMultiplier: DEFAULT_CHILL_MULTIPLIER
+    };
+    migrated.metrics = migrated.metrics && typeof migrated.metrics === 'object'
+      ? migrated.metrics
+      : { daily: {} };
+    return migrated;
+  }
+
+  function normalizeMetrics(value) {
+    const source = value?.daily && typeof value.daily === 'object' && !Array.isArray(value.daily)
+      ? value.daily
+      : {};
+    const daily = {};
+    Object.keys(source)
+      .filter(date => /^\d{4}-\d{2}-\d{2}$/.test(date))
+      .sort((a, b) => b.localeCompare(a))
+      .slice(0, DAILY_METRIC_LIMIT)
+      .forEach(date => {
+        const row = source[date];
+        if (!row || typeof row !== 'object' || Array.isArray(row)) return;
+        const clean = {};
+        Object.entries(row).forEach(([metric, rawValue]) => {
+          if (!/^[a-z][a-z0-9_-]{0,31}$/.test(metric)) return;
+          const number = Number(rawValue);
+          if (!Number.isFinite(number)) return;
+          clean[metric] = metric === 'mood'
+            ? Math.round(clampNumber(number, MOOD_MIN, MOOD_MAX, 0))
+            : clampNumber(number, -1000000000, 1000000000, 0);
+        });
+        if (Object.keys(clean).length) daily[date] = clean;
+      });
+    return { daily };
+  }
+
 
   function normalizeState(candidate) {
-    const shouldGrantStarterItem = Boolean(candidate && candidate.version !== STATE_VERSION);
+    const sourceVersion = Number(candidate?.version);
+    const shouldGrantStarterItem = Number.isFinite(sourceVersion) && sourceVersion >= 2 && sourceVersion < 9;
     if (candidate?.version === 2) candidate = migrateV2State(candidate);
     if (candidate?.version === 3) candidate = migrateV3State(candidate);
     if (candidate?.version === 4) candidate = migrateV4State(candidate);
@@ -933,6 +986,7 @@
     if (candidate?.version === 6) candidate = migrateV6State(candidate);
     if (candidate?.version === 7) candidate = migrateV7State(candidate);
     if (candidate?.version === 8) candidate = migrateV8State(candidate);
+    if (candidate?.version === 9) candidate = migrateV9State(candidate);
     if (!candidate || candidate.version !== STATE_VERSION) return freshState();
 
     const next = freshState();
@@ -986,6 +1040,13 @@
       0,
       2,
       DEFAULT_RESISTANCE_BUILDUP
+    );
+    next.settings.chillModeEnabled = candidate.settings?.chillModeEnabled === true;
+    next.settings.chillMultiplier = clampNumber(
+      candidate.settings?.chillMultiplier,
+      CHILL_MULTIPLIER_MIN,
+      CHILL_MULTIPLIER_MAX,
+      DEFAULT_CHILL_MULTIPLIER
     );
     const sourceActions = Array.isArray(candidate.settings?.actions)
       ? candidate.settings.actions
@@ -1082,6 +1143,7 @@
       ? String(candidate.progression.streakThrough)
       : '';
 
+    next.metrics = normalizeMetrics(candidate.metrics);
     next.history = Array.isArray(candidate.history)
       ? candidate.history.slice(0, HISTORY_LIMIT).map(normalizeHistoryDay).filter(Boolean)
       : [];
@@ -1263,7 +1325,7 @@
       const raw = localStorage.getItem(storageKey);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      if (!parsed || ![2, 3, 4, 5, 6, 7, 8, STATE_VERSION].includes(parsed.version)) return null;
+      if (!parsed || ![2, 3, 4, 5, 6, 7, 8, 9, STATE_VERSION].includes(parsed.version)) return null;
       return normalizeState(parsed);
     } catch (error) {
       console.warn('Could not read cached MoLife data:', error);
@@ -1419,13 +1481,17 @@
       ? (summary.categoryActionCount[categoryId] || 0)
       : Math.max(0, clampInt(priorActionCount, 0, 100000, 0));
     const efficiency = getCategoryEfficiency(categoryId, actionCount, settings);
-    const raw = baseDamage * efficiency.multiplier;
+    const chillMultiplier = settings.chillModeEnabled === true
+      ? clampNumber(settings.chillMultiplier, CHILL_MULTIPLIER_MIN, CHILL_MULTIPLIER_MAX, DEFAULT_CHILL_MULTIPLIER)
+      : 1;
+    const raw = baseDamage * efficiency.multiplier * chillMultiplier;
     return {
       baseDamage,
       damage: Math.max(1, Math.round(raw)),
       efficiency: efficiency.multiplier,
       focus: efficiency.focus,
       resistance: efficiency.resistance,
+      chillMultiplier,
       raw
     };
   }
