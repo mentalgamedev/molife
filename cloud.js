@@ -159,8 +159,11 @@
   accountButton.append(profileButtonName);
 
   accountZone.append(syncStatus, signInButton, createAccountButton, accountButton);
+  const topbarActions = document.querySelector('.topbar-actions');
   const settingsButton = document.querySelector('#settingsButton');
-  if (settingsButton) {
+  if (topbarActions) {
+    topbarActions.before(accountZone);
+  } else if (settingsButton) {
     settingsButton.before(accountZone);
   } else {
     document.querySelector('.topbar')?.append(accountZone);
@@ -992,6 +995,7 @@
       } else {
         setSyncStatus('Synced', 'ok');
       }
+      window.DalliApp.completeStartup?.();
       return;
     }
 
@@ -1000,13 +1004,16 @@
     if (!initialState) {
       const guestState = window.DalliApp.getState();
 
+      const freshAccountState = window.DalliApp.getDefaultState();
+      freshAccountState.onboarding.infoSeen = guestState.onboarding?.infoSeen === true;
+
       if (hasMeaningfulLocalState(guestState)) {
         const importLocal = window.confirm(
           `Import the MoLife setup and history currently stored on this device into ${user.username}'s account?\n\nOK = import it\nCancel = start fresh`
         );
-        initialState = importLocal ? guestState : window.DalliApp.getDefaultState();
+        initialState = importLocal ? guestState : freshAccountState;
       } else {
-        initialState = window.DalliApp.getDefaultState();
+        initialState = freshAccountState;
       }
     }
 
@@ -1019,6 +1026,8 @@
       setSyncStatus('Synced', 'ok');
     } catch (error) {
       handleSaveError(error, window.DalliApp.getState());
+    } finally {
+      window.DalliApp.completeStartup?.();
     }
   }
 
@@ -1136,7 +1145,15 @@
 
   loginTab.addEventListener('click', () => setAuthMode('login'));
   registerTab.addEventListener('click', () => setAuthMode('register'));
-  authCancelButton.addEventListener('click', () => authDialog.close());
+  authCancelButton.addEventListener('click', () => {
+    authDialog.close();
+    if (!user && !pendingVerification) window.DalliApp.completeStartup?.();
+  });
+  authDialog.addEventListener('cancel', () => {
+    window.setTimeout(() => {
+      if (!user && !pendingVerification) window.DalliApp.completeStartup?.();
+    }, 0);
+  });
   resendVerificationButton.addEventListener('click', resendVerification);
   accountCloseButton.addEventListener('click', () => accountDialog.close());
   signOutButton.addEventListener('click', signOut);
@@ -1191,12 +1208,15 @@
 
       if (pendingInvite && registrationMode !== 'closed') {
         openAuth('register');
+      } else {
+        window.DalliApp.completeStartup?.();
       }
     } catch (error) {
       setSignedOutUi();
       createAccountButton.disabled = true;
       createAccountButton.title = 'Account server is currently unavailable';
       setSyncStatus('Local · offline', 'warning');
+      window.DalliApp.completeStartup?.();
     }
   }
 

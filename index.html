@@ -9,11 +9,12 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="preload" href="fonts/PunkKid.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=4.22.0">
-  <link rel="stylesheet" href="pawnshop.css?v=4.22.0">
-  <link rel="stylesheet" href="mood.css?v=4.22.0">
-  <link rel="stylesheet" href="metrics.css?v=4.22.0">
-  <link rel="stylesheet" href="settings.css?v=4.22.0">
+  <link rel="stylesheet" href="styles.css?v=4.23.0">
+  <link rel="stylesheet" href="pawnshop.css?v=4.23.0">
+  <link rel="stylesheet" href="mood.css?v=4.23.0">
+  <link rel="stylesheet" href="metrics.css?v=4.23.0">
+  <link rel="stylesheet" href="settings.css?v=4.23.0">
+  <link rel="stylesheet" href="info.css?v=4.23.0">
 </head>
 <body>
   <div class="city-noise" aria-hidden="true"></div>
@@ -32,10 +33,13 @@
       <div class="brand-block">
         <h1 class="brand-title" aria-label="MoLife"><span class="brand-mo">Mo</span><span class="brand-life">Life</span><span class="brand-tm">™</span></h1>
         <div class="brand-subline"><strong>Daily Struggle Assistant</strong><span> · powered by MoThink-6.7</span></div>
-        <div class="app-version" aria-label="MoLife version 4.22.0">v4.22.0 · Department of Legacy Disposal</div>
+        <div class="app-version" aria-label="MoLife version 4.23.0">v4.23.0 · Department of Basic Instructions</div>
         <div id="todayLabel" class="muted"></div>
       </div>
-      <button id="settingsButton" class="icon-button" type="button" aria-label="Open settings" title="Settings">⚙</button>
+      <div class="topbar-actions">
+        <button id="infoButton" class="icon-button info-button" type="button" aria-label="About MoLife" title="About MoLife"><span aria-hidden="true">i</span></button>
+        <button id="settingsButton" class="icon-button" type="button" aria-label="Open settings" title="Settings">⚙</button>
+      </div>
     </header>
 
     <main>
@@ -105,12 +109,12 @@
               <div class="eyebrow">TRACK-O-TRON // DAILY SIGNAL</div>
               <h2 id="moodHeading">Mood</h2>
             </div>
-            <strong id="moodValue" class="mood-value" data-level="unlogged">NOT LOGGED</strong>
+            <strong id="moodValue" class="mood-value" data-level="unlogged">NOT SET TODAY</strong>
           </div>
 
           <label class="mood-control">
             <span class="sr-only">Today's mood</span>
-            <input id="moodSlider" type="range" min="-100" max="100" step="5" value="0" aria-label="Today's mood" aria-valuetext="Balanced position, not recorded today">
+            <input id="moodSlider" type="range" min="-100" max="100" step="5" value="0" aria-label="Today's mood" aria-valuetext="Balanced position, mood not set today">
             <span class="mood-scale-labels" aria-hidden="true">
               <span>VERY LOW</span>
               <span>LOW</span>
@@ -120,7 +124,7 @@
             </span>
           </label>
 
-          <div id="moodStatus" class="mood-status" role="status" aria-live="polite">MOVE THE SLIDER TO LOG TODAY</div>
+          <div id="moodStatus" class="mood-status" role="status" aria-live="polite">MOVE THE SLIDER TO SET TODAY'S MOOD</div>
           <div class="mood-actions">
             <p class="mood-note">Untouched days are not recorded. Move the slider again any time today to update the reading.</p>
             <button class="mood-trends-button" type="button" data-open-metric="mood">View trend</button>
@@ -223,6 +227,29 @@
       </div>
     </footer>
   </div>
+
+  <dialog id="infoDialog" class="info-dialog" aria-labelledby="infoDialogTitle" aria-describedby="infoDialogIntro">
+    <article class="info-card">
+      <header class="info-head">
+        <div>
+          <div class="eyebrow">MANDATORY VOLUNTARY ORIENTATION</div>
+          <h2 id="infoDialogTitle">Welcome, citizen</h2>
+        </div>
+        <button id="closeInfoButton" class="icon-button info-close" type="button" aria-label="Close MoLife information">×</button>
+      </header>
+
+      <p id="infoDialogIntro" class="info-intro">MoLife turns everyday tasks into a fight against your Dark Doppelgänger.</p>
+
+      <div class="info-steps">
+        <p><strong>DO THINGS.</strong> Tap matching Actions to deal damage. Defeat the Doppelgänger to win the day and earn XP.</p>
+        <p><strong>MIX IT UP.</strong> Repeating one category builds Resistance. Focus means that category deliberately takes more effort.</p>
+        <p><strong>NEED A LIGHTER DAY?</strong> Chill Mode boosts normal Action damage. Mood tracking is optional and only records a day when you set it.</p>
+      </div>
+
+      <p class="info-reopen">You can reopen this briefing with the <strong>i</strong> button at any time.</p>
+      <button id="acknowledgeInfoButton" class="primary-button info-acknowledge" type="button">GOT IT</button>
+    </article>
+  </dialog>
 
   <dialog id="metricsDialog" class="metrics-dialog" aria-labelledby="metricsDialogTitle">
     <section class="metrics-terminal">
@@ -659,8 +686,8 @@
     </article>
   </template>
 
-  <script src="app.js?v=4.22.0" defer></script>
-  <script src="metrics-viewer.js?v=4.22.0" defer></script>
-  <script src="cloud.js?v=4.22.0" defer></script>
+  <script src="app.js?v=4.23.0" defer></script>
+  <script src="metrics-viewer.js?v=4.23.0" defer></script>
+  <script src="cloud.js?v=4.23.0" defer></script>
 </body>
 </html>

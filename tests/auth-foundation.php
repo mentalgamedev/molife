@@ -125,6 +125,15 @@ test_assert(($validatedV10['settings']['chillMultiplier'] ?? null) === 2.0, 'v10
 test_assert(($validatedV10['metrics']['daily']['2026-01-01']['mood'] ?? null) === -35, 'v10 should preserve negative mood values');
 test_assert(($validatedV10['metrics']['daily']['2026-01-02']['actions_completed'] ?? null) === 7, 'v10 daily metrics should remain generic');
 
+$v11State = $v10State;
+$v11State['version'] = 11;
+$v11State['onboarding'] = ['infoSeen' => true];
+$validatedV11 = dalli_validate_state($v11State);
+test_assert(($validatedV11['version'] ?? null) === 11, 'v11 onboarding state should validate');
+test_assert(($validatedV11['onboarding']['infoSeen'] ?? null) === true, 'v11 should preserve onboarding acknowledgement');
+test_assert(($validatedV11['settings']['chillMultiplier'] ?? null) === 2.0, 'v11 should preserve v10 combat tuning');
+test_assert(($validatedV11['metrics']['daily']['2026-01-01']['mood'] ?? null) === -35, 'v11 should preserve mood metrics');
+
 $pdo = dalli_pdo();
 test_assert(dalli_auth_schema_ready($pdo), 'modern auth schema should be detected');
 test_assert(dalli_registration_mode() === 'invite', 'registration mode should default from test config');

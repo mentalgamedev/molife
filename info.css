@@ -1,0 +1,132 @@
+/* MoLife v4.23 — Department of Basic Instructions */
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.info-button {
+  font-family: Georgia, serif;
+  font-size: 1.1rem;
+  font-weight: 1000;
+  font-style: normal;
+}
+
+.info-button span {
+  display: block;
+  transform: translateY(-1px);
+}
+
+.info-dialog {
+  width: min(620px, calc(100vw - 28px));
+  max-height: min(760px, calc(100vh - 28px));
+  padding: 0;
+  overflow: auto;
+  border: 1px solid rgba(137, 146, 164, .24);
+  border-radius: 8px;
+  background: #10141b;
+  color: var(--text);
+  box-shadow:
+    0 30px 90px rgba(0,0,0,.68),
+    7px 9px 0 rgba(0,0,0,.24);
+}
+
+.info-dialog::backdrop {
+  background: rgba(4, 6, 10, .82);
+  backdrop-filter: blur(3px);
+}
+
+.info-card {
+  padding: 23px;
+  background:
+    radial-gradient(circle at 93% 5%, rgba(122,108,255,.10), transparent 18rem),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.011) 0 1px, transparent 1px 5px),
+    #12161d;
+}
+
+.info-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+
+.info-head h2 {
+  margin: 2px 0 0;
+  font-size: clamp(1.55rem, 5vw, 2.25rem);
+}
+
+.info-close {
+  flex: 0 0 auto;
+}
+
+.info-intro {
+  margin: 18px 0 14px;
+  color: #d8dde5;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.info-steps {
+  display: grid;
+  gap: 8px;
+}
+
+.info-steps p {
+  margin: 0;
+  padding: 11px 12px;
+  border: 1px solid rgba(255,255,255,.065);
+  border-radius: 5px;
+  background: rgba(255,255,255,.022);
+  color: #9ea7b5;
+  font-size: .78rem;
+  line-height: 1.5;
+}
+
+.info-steps strong {
+  color: #d8d2ff;
+  font-size: .7rem;
+  letter-spacing: .06em;
+}
+
+.info-reopen {
+  margin: 13px 0 0;
+  color: #747e8c;
+  font-size: .69rem;
+  line-height: 1.45;
+}
+
+.info-acknowledge {
+  width: 100%;
+  margin-top: 15px;
+}
+
+@media (max-width: 620px) {
+  .topbar-actions {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: end;
+  }
+
+  .topbar-actions .icon-button {
+    width: 42px;
+    height: 42px;
+  }
+
+  .info-dialog {
+    width: calc(100vw - 14px);
+    max-height: calc(100vh - 14px);
+  }
+
+  .info-dialog::backdrop {
+    backdrop-filter: none;
+  }
+
+  .info-card {
+    padding: 17px 14px 15px;
+  }
+}

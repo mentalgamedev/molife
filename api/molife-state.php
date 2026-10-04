@@ -1062,21 +1062,24 @@ function dalli_validate_state_v4(mixed $state): array
 }
 
 
-function dalli_validate_state_v5_v10(mixed $state): array
+function dalli_validate_state_v5_v11(mixed $state): array
 {
     $version = is_array($state) ? ($state['version'] ?? null) : null;
-    $isV6Plus = in_array($version, [6, 7, 8, 9, 10], true);
-    $isV7Plus = in_array($version, [7, 8, 9, 10], true);
-    $isV8Plus = in_array($version, [8, 9, 10], true);
-    $isV10Plus = $version === 10;
-    $allowedTopLevel = $isV10Plus
-        ? ['version', 'settings', 'progression', 'current', 'history', 'inventory', 'oneOffs', 'metrics']
-        : ($isV8Plus
-            ? ['version', 'settings', 'progression', 'current', 'history', 'inventory', 'oneOffs']
-            : ['version', 'settings', 'progression', 'current', 'history', 'inventory']);
+    $isV6Plus = in_array($version, [6, 7, 8, 9, 10, 11], true);
+    $isV7Plus = in_array($version, [7, 8, 9, 10, 11], true);
+    $isV8Plus = in_array($version, [8, 9, 10, 11], true);
+    $isV10Plus = in_array($version, [10, 11], true);
+    $isV11Plus = $version === 11;
+    $allowedTopLevel = $isV11Plus
+        ? ['version', 'settings', 'progression', 'current', 'history', 'inventory', 'oneOffs', 'metrics', 'onboarding']
+        : ($isV10Plus
+            ? ['version', 'settings', 'progression', 'current', 'history', 'inventory', 'oneOffs', 'metrics']
+            : ($isV8Plus
+                ? ['version', 'settings', 'progression', 'current', 'history', 'inventory', 'oneOffs']
+                : ['version', 'settings', 'progression', 'current', 'history', 'inventory']));
     if (!is_array($state)
         || !dalli_keys_allowed($state, $allowedTopLevel)
-        || !in_array($version, [5, 6, 7, 8, 9, 10], true)) {
+        || !in_array($version, [5, 6, 7, 8, 9, 10, 11], true)) {
         dalli_fail('Unsupported Dalli state.', 422);
     }
 
@@ -1087,6 +1090,7 @@ function dalli_validate_state_v5_v10(mixed $state): array
     $inventory = $state['inventory'] ?? null;
     $oneOffs = $state['oneOffs'] ?? null;
     $metrics = $state['metrics'] ?? null;
+    $onboarding = $state['onboarding'] ?? null;
 
     $allowedSettings = $isV10Plus
         ? ['fullEnemyHp', 'focusCategoryId', 'focusFactor', 'resistanceBuildup', 'chillModeEnabled', 'chillMultiplier', 'categories', 'actions', 'combos']
@@ -1284,6 +1288,16 @@ function dalli_validate_state_v5_v10(mixed $state): array
         }
 
         $comboIds[$id] = true;
+    }
+
+    if ($isV11Plus) {
+        if (!is_array($onboarding)
+            || !dalli_keys_allowed($onboarding, ['infoSeen'])
+            || !is_bool($onboarding['infoSeen'] ?? null)) {
+            dalli_fail('Invalid onboarding state.', 422);
+        }
+    } elseif ($onboarding !== null) {
+        dalli_fail('Onboarding state is not valid for this state version.', 422);
     }
 
     if ($isV10Plus) {
@@ -1724,7 +1738,7 @@ function dalli_validate_state(mixed $state): array
     if ($version === 2) return dalli_validate_state_v2($state);
     if ($version === 3) return dalli_validate_state_v3($state);
     if ($version === 4) return dalli_validate_state_v4($state);
-    if ($version === 5 || $version === 6 || $version === 7 || $version === 8 || $version === 9 || $version === 10) return dalli_validate_state_v5_v10($state);
+    if ($version === 5 || $version === 6 || $version === 7 || $version === 8 || $version === 9 || $version === 10 || $version === 11) return dalli_validate_state_v5_v11($state);
     dalli_fail('Unsupported Dalli state.', 422);
 }
 

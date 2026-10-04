@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const STATE_VERSION = 10;
+  const STATE_VERSION = 11;
   const TEMPLATE_VERSION = 1;
   const ITEM_DROP_CHANCE = 0.40;
   const ITEM_CAPACITY = 8;
@@ -149,6 +149,21 @@
     'chores-medium': ['Cleaning — 15–30 min', 'Proper chore / cleaning']
   });
 
+  const DEFAULT_ACTION_DAMAGE_MIGRATIONS = Object.freeze({
+    'wellbeing-workout-30': Object.freeze([20, 30]),
+    'wellbeing-walk-20': Object.freeze([10, 15]),
+    'wellbeing-mobility-10': Object.freeze([5, 10]),
+    'wellbeing-good-meal': Object.freeze([10, 15]),
+    'work-focus-25': Object.freeze([15, 25]),
+    'work-focus-50': Object.freeze([30, 45]),
+    'work-practice-20': Object.freeze([10, 15]),
+    'work-admin': Object.freeze([10, 15]),
+    'chores-small': Object.freeze([5, 10]),
+    'chores-medium': Object.freeze([10, 20]),
+    'chores-laundry': Object.freeze([10, 15]),
+    'chores-big': Object.freeze([20, 30])
+  });
+
   let activeStorageKey = STORAGE_KEY;
   let suppressCloudSave = false;
 
@@ -194,18 +209,18 @@
         { id: UNCATEGORIZED_ID, name: 'Uncategorized', icon: '•', color: '#8b93a4' }
       ],
       actions: [
-        { id: 'wellbeing-workout-30', categoryId: 'wellbeing', name: 'Proper workout', baseDamage: 20, type: 'repeatable', trackVisible: true, requiredForVictory: false, requiredCount: 1 },
-        { id: 'wellbeing-walk-20', categoryId: 'wellbeing', name: 'Walk / fresh air', baseDamage: 10, type: 'repeatable', trackVisible: true, requiredForVictory: false, requiredCount: 1 },
-        { id: 'wellbeing-mobility-10', categoryId: 'wellbeing', name: 'Quick movement / stretch', baseDamage: 5, type: 'repeatable', trackVisible: true, requiredForVictory: false, requiredCount: 1 },
-        { id: 'wellbeing-good-meal', categoryId: 'wellbeing', name: 'Proper healthy meal', baseDamage: 10, type: 'once', trackVisible: true, requiredForVictory: false, requiredCount: 1 },
-        { id: 'work-focus-25', categoryId: 'work', name: 'Focus session', baseDamage: 15, type: 'repeatable', trackVisible: true, requiredForVictory: false, requiredCount: 1 },
-        { id: 'work-focus-50', categoryId: 'work', name: 'Deep focus session', baseDamage: 30, type: 'repeatable', trackVisible: true, requiredForVictory: false, requiredCount: 1 },
-        { id: 'work-practice-20', categoryId: 'work', name: 'Practice / skill', baseDamage: 10, type: 'repeatable', trackVisible: true, requiredForVictory: false, requiredCount: 1 },
-        { id: 'work-admin', categoryId: 'work', name: 'Annoying admin task', baseDamage: 10, type: 'once', trackVisible: true, requiredForVictory: false, requiredCount: 1 },
-        { id: 'chores-small', categoryId: 'chores', name: 'Tiny chore', baseDamage: 5, type: 'repeatable', trackVisible: true, requiredForVictory: false, requiredCount: 1 },
-        { id: 'chores-medium', categoryId: 'chores', name: 'Proper chore / cleaning', baseDamage: 10, type: 'repeatable', trackVisible: true, requiredForVictory: false, requiredCount: 1 },
-        { id: 'chores-laundry', categoryId: 'chores', name: 'Laundry', baseDamage: 10, type: 'once', trackVisible: true, requiredForVictory: false, requiredCount: 1 },
-        { id: 'chores-big', categoryId: 'chores', name: 'Big chore / deep clean', baseDamage: 20, type: 'repeatable', trackVisible: true, requiredForVictory: false, requiredCount: 1 }
+        { id: 'wellbeing-workout-30', categoryId: 'wellbeing', name: 'Proper workout', baseDamage: 30, type: 'repeatable', trackVisible: true, requiredForVictory: false, requiredCount: 1 },
+        { id: 'wellbeing-walk-20', categoryId: 'wellbeing', name: 'Walk / fresh air', baseDamage: 15, type: 'repeatable', trackVisible: true, requiredForVictory: false, requiredCount: 1 },
+        { id: 'wellbeing-mobility-10', categoryId: 'wellbeing', name: 'Quick movement / stretch', baseDamage: 10, type: 'repeatable', trackVisible: true, requiredForVictory: false, requiredCount: 1 },
+        { id: 'wellbeing-good-meal', categoryId: 'wellbeing', name: 'Proper healthy meal', baseDamage: 15, type: 'once', trackVisible: true, requiredForVictory: false, requiredCount: 1 },
+        { id: 'work-focus-25', categoryId: 'work', name: 'Focus session', baseDamage: 25, type: 'repeatable', trackVisible: true, requiredForVictory: false, requiredCount: 1 },
+        { id: 'work-focus-50', categoryId: 'work', name: 'Deep focus session', baseDamage: 45, type: 'repeatable', trackVisible: true, requiredForVictory: false, requiredCount: 1 },
+        { id: 'work-practice-20', categoryId: 'work', name: 'Practice / skill', baseDamage: 15, type: 'repeatable', trackVisible: true, requiredForVictory: false, requiredCount: 1 },
+        { id: 'work-admin', categoryId: 'work', name: 'Annoying admin task', baseDamage: 15, type: 'once', trackVisible: true, requiredForVictory: false, requiredCount: 1 },
+        { id: 'chores-small', categoryId: 'chores', name: 'Tiny chore', baseDamage: 10, type: 'repeatable', trackVisible: true, requiredForVictory: false, requiredCount: 1 },
+        { id: 'chores-medium', categoryId: 'chores', name: 'Proper chore / cleaning', baseDamage: 20, type: 'repeatable', trackVisible: true, requiredForVictory: false, requiredCount: 1 },
+        { id: 'chores-laundry', categoryId: 'chores', name: 'Laundry', baseDamage: 15, type: 'once', trackVisible: true, requiredForVictory: false, requiredCount: 1 },
+        { id: 'chores-big', categoryId: 'chores', name: 'Big chore / deep clean', baseDamage: 30, type: 'repeatable', trackVisible: true, requiredForVictory: false, requiredCount: 1 }
       ],
       combos: []
     },
@@ -221,6 +236,9 @@
     oneOffs: [],
     metrics: {
       daily: {}
+    },
+    onboarding: {
+      infoSeen: false
     },
     current: {
       date: '',
@@ -326,6 +344,10 @@
     attackReportSteamPromo: document.querySelector('#attackReportSteamPromo'),
     closeAttackReportButton: document.querySelector('#closeAttackReportButton'),
 
+    infoButton: document.querySelector('#infoButton'),
+    infoDialog: document.querySelector('#infoDialog'),
+    closeInfoButton: document.querySelector('#closeInfoButton'),
+    acknowledgeInfoButton: document.querySelector('#acknowledgeInfoButton'),
     settingsButton: document.querySelector('#settingsButton'),
     settingsDialog: document.querySelector('#settingsDialog'),
     settingsForm: document.querySelector('#settingsForm'),
@@ -384,6 +406,7 @@
   let moodSaveTimer = null;
   let settingsBackgroundScrollY = 0;
   let actionDrag = null;
+  let startupResolved = false;
   const categoryScrollPositions = new Map();
 
   const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -958,6 +981,12 @@
     return migrated;
   }
 
+  function migrateV10State(candidate) {
+    const migrated = deepClone(candidate);
+    migrated.version = STATE_VERSION;
+    return migrated;
+  }
+
   function normalizeMetrics(value) {
     const source = value?.daily && typeof value.daily === 'object' && !Array.isArray(value.daily)
       ? value.daily
@@ -988,6 +1017,7 @@
   function normalizeState(candidate) {
     const sourceVersion = Number(candidate?.version);
     const shouldGrantStarterItem = Number.isFinite(sourceVersion) && sourceVersion >= 2 && sourceVersion < 9;
+    const shouldMigrateDefaultActionDamage = Number.isFinite(sourceVersion) && sourceVersion >= 2 && sourceVersion < STATE_VERSION;
     if (candidate?.version === 2) candidate = migrateV2State(candidate);
     if (candidate?.version === 3) candidate = migrateV3State(candidate);
     if (candidate?.version === 4) candidate = migrateV4State(candidate);
@@ -996,6 +1026,7 @@
     if (candidate?.version === 7) candidate = migrateV7State(candidate);
     if (candidate?.version === 8) candidate = migrateV8State(candidate);
     if (candidate?.version === 9) candidate = migrateV9State(candidate);
+    if (candidate?.version === 10) candidate = migrateV10State(candidate);
     if (!candidate || candidate.version !== STATE_VERSION) return freshState();
 
     const next = freshState();
@@ -1068,11 +1099,16 @@
       let name = String(action?.name || 'Unnamed action').slice(0, 100);
       const migration = DEFAULT_ACTION_NAME_MIGRATIONS[id];
       if (migration && name === migration[0]) name = migration[1];
+      let baseDamage = clampInt(action?.baseDamage, 1, 200, 10);
+      const damageMigration = DEFAULT_ACTION_DAMAGE_MIGRATIONS[id];
+      if (shouldMigrateDefaultActionDamage && damageMigration && baseDamage === damageMigration[0]) {
+        baseDamage = damageMigration[1];
+      }
       return {
         id,
         categoryId: categoryIds.has(String(action?.categoryId)) ? String(action.categoryId) : UNCATEGORIZED_ID,
         name,
-        baseDamage: clampInt(action?.baseDamage, 1, 200, 10),
+        baseDamage,
         type: action?.type === 'once' ? 'once' : 'repeatable',
         requiredForVictory: Boolean(action?.requiredForVictory),
         requiredCount: action?.type === 'once'
@@ -1153,6 +1189,9 @@
       : '';
 
     next.metrics = normalizeMetrics(candidate.metrics);
+    next.onboarding.infoSeen = sourceVersion < STATE_VERSION
+      ? true
+      : candidate.onboarding?.infoSeen === true;
     next.history = Array.isArray(candidate.history)
       ? candidate.history.slice(0, HISTORY_LIMIT).map(normalizeHistoryDay).filter(Boolean)
       : [];
@@ -1334,7 +1373,7 @@
       const raw = localStorage.getItem(storageKey);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      if (!parsed || ![2, 3, 4, 5, 6, 7, 8, 9, STATE_VERSION].includes(parsed.version)) return null;
+      if (!parsed || ![2, 3, 4, 5, 6, 7, 8, 9, 10, STATE_VERSION].includes(parsed.version)) return null;
       return normalizeState(parsed);
     } catch (error) {
       console.warn('Could not read cached MoLife data:', error);
@@ -1849,12 +1888,12 @@
     els.moodSlider.value = String(value);
     els.moodSlider.setAttribute('aria-valuetext', recorded
       ? label
-      : 'Balanced position, not recorded today');
-    els.moodValue.textContent = recorded ? label : 'NOT LOGGED';
+      : 'Balanced position, mood not set today');
+    els.moodValue.textContent = recorded ? label : 'NOT SET TODAY';
     els.moodValue.dataset.level = recorded ? label.toLowerCase().replace(/\s+/g, '-') : 'unlogged';
     els.moodStatus.textContent = recorded
-      ? 'TODAY\'S MOOD RECORDED · MOVE AGAIN TO UPDATE'
-      : 'MOVE THE SLIDER TO LOG TODAY';
+      ? 'TODAY\'S MOOD SET · MOVE AGAIN TO UPDATE'
+      : 'MOVE THE SLIDER TO SET TODAY\'S MOOD';
     els.moodPanel?.classList.toggle('has-reading', recorded);
   }
 
@@ -4677,7 +4716,9 @@
     );
     if (!confirmed) return;
 
+    const infoSeen = state.onboarding?.infoSeen === true;
     state = freshState();
+    state.onboarding.infoSeen = infoSeen;
     state.current = {
       date: localDateKey(),
       maxHp: getEnemyHp(),
@@ -4696,6 +4737,35 @@
     render();
   }
 
+  function openInfoDialog() {
+    if (!els.infoDialog) return;
+    if (typeof els.infoDialog.showModal === 'function') {
+      if (!els.infoDialog.open) els.infoDialog.showModal();
+    } else {
+      els.infoDialog.setAttribute('open', '');
+    }
+    els.infoDialog.scrollTop = 0;
+  }
+
+  function acknowledgeInfoDialog() {
+    if (state.onboarding?.infoSeen !== true) {
+      if (!state.onboarding || typeof state.onboarding !== 'object') state.onboarding = { infoSeen: true };
+      state.onboarding.infoSeen = true;
+      saveState();
+    }
+    if (!els.infoDialog) return;
+    if (typeof els.infoDialog.close === 'function' && els.infoDialog.open) els.infoDialog.close();
+    else els.infoDialog.removeAttribute('open');
+  }
+
+  function completeStartup() {
+    if (startupResolved) return;
+    startupResolved = true;
+    if (state.onboarding?.infoSeen !== true) {
+      window.setTimeout(openInfoDialog, 0);
+    }
+  }
+
   window.DalliApp = Object.freeze({
     stateVersion: STATE_VERSION,
     getState: () => deepClone(state),
@@ -4704,7 +4774,19 @@
     readStoredState,
     replaceState,
     useStorageKey,
+    completeStartup,
     guestStorageKey: STORAGE_KEY
+  });
+
+  els.infoButton?.addEventListener('click', openInfoDialog);
+  els.closeInfoButton?.addEventListener('click', acknowledgeInfoDialog);
+  els.acknowledgeInfoButton?.addEventListener('click', acknowledgeInfoDialog);
+  els.infoDialog?.addEventListener('cancel', event => {
+    event.preventDefault();
+    acknowledgeInfoDialog();
+  });
+  els.infoDialog?.addEventListener('click', event => {
+    if (event.target === els.infoDialog) acknowledgeInfoDialog();
   });
 
   els.moodSlider?.addEventListener('input', () => recordMood(els.moodSlider.value));
