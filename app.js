@@ -1888,7 +1888,7 @@
     els.moodSlider.value = String(value);
     els.moodSlider.setAttribute('aria-valuetext', recorded
       ? label
-      : 'Balanced position, not recorded today');
+      : 'Balanced position, mood not set today');
     els.moodValue.textContent = recorded ? label : 'NOT SET TODAY';
     els.moodValue.dataset.level = recorded ? label.toLowerCase().replace(/\s+/g, '-') : 'unlogged';
     els.moodStatus.textContent = recorded
