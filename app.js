@@ -1342,8 +1342,18 @@
     }
   }
 
+  function writeStoredState(storageKey, value = state) {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(value));
+      return true;
+    } catch (error) {
+      console.warn('Could not persist MoLife data locally:', error);
+      return false;
+    }
+  }
+
   function saveState() {
-    localStorage.setItem(activeStorageKey, JSON.stringify(state));
+    writeStoredState(activeStorageKey);
     if (!suppressCloudSave && window.DalliCloud && typeof window.DalliCloud.queueSave === 'function') {
       window.DalliCloud.queueSave(deepClone(state));
     }
@@ -1355,7 +1365,7 @@
       activeStorageKey = storageKey;
       state = normalizeState(candidate);
       ensureToday();
-      localStorage.setItem(activeStorageKey, JSON.stringify(state));
+      writeStoredState(activeStorageKey);
       render();
     } finally {
       suppressCloudSave = false;
