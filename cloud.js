@@ -992,6 +992,7 @@
       } else {
         setSyncStatus('Synced', 'ok');
       }
+      window.DalliApp.completeStartup?.();
       return;
     }
 
@@ -1019,6 +1020,8 @@
       setSyncStatus('Synced', 'ok');
     } catch (error) {
       handleSaveError(error, window.DalliApp.getState());
+    } finally {
+      window.DalliApp.completeStartup?.();
     }
   }
 
@@ -1137,6 +1140,9 @@
   loginTab.addEventListener('click', () => setAuthMode('login'));
   registerTab.addEventListener('click', () => setAuthMode('register'));
   authCancelButton.addEventListener('click', () => authDialog.close());
+  authDialog.addEventListener('close', () => {
+    if (!user && !pendingVerification) window.DalliApp.completeStartup?.();
+  });
   resendVerificationButton.addEventListener('click', resendVerification);
   accountCloseButton.addEventListener('click', () => accountDialog.close());
   signOutButton.addEventListener('click', signOut);
@@ -1191,12 +1197,15 @@
 
       if (pendingInvite && registrationMode !== 'closed') {
         openAuth('register');
+      } else {
+        window.DalliApp.completeStartup?.();
       }
     } catch (error) {
       setSignedOutUi();
       createAccountButton.disabled = true;
       createAccountButton.title = 'Account server is currently unavailable';
       setSyncStatus('Local · offline', 'warning');
+      window.DalliApp.completeStartup?.();
     }
   }
 
