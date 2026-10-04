@@ -379,6 +379,33 @@ Compatibility names such as `DalliApp`, `DALLI_*` constants and the tiny legacy 
 
 State schema remains **v10** and no gameplay rules change in this release.
 
+## v4.23 — Department of Basic Instructions
+
+The first-run experience now has a short **MoLife orientation** overlay explaining the core loop: real-life Actions deal damage, daily victory awards XP, repeated categories build Resistance, Focus deliberately increases workload, Chill Mode reduces the required effort, and Mood tracking is optional. A permanent **i** button sits immediately left of Settings and reopens the briefing at any time.
+
+The briefing opens automatically only for genuinely fresh users. Existing v10 and older saves migrate with the briefing already acknowledged, so this release does not interrupt returning users. Startup waits for account/cloud resolution before deciding whether to show onboarding, preventing a returning signed-in user on a new device from being mistaken for a fresh guest. If a guest has already read the briefing and later creates an account, that acknowledgement follows them into the new account state. Resetting game data also preserves it.
+
+The Mood tracker empty badge now reads **NOT SET TODAY**, with the helper copy **MOVE THE SLIDER TO SET TODAY'S MOOD**. The underlying rule is unchanged: an untouched centered slider is missing data, while deliberately setting the slider to the center records Balanced.
+
+The predefined starter Actions are rebalanced for the current Focus + Resistance system:
+
+- Proper workout: **30**
+- Walk / fresh air: **15**
+- Quick movement / stretch: **10**
+- Proper healthy meal: **15**
+- Focus session: **25**
+- Deep focus session: **45**
+- Practice / skill: **15**
+- Annoying admin task: **15**
+- Tiny chore: **10**
+- Proper chore / cleaning: **20**
+- Laundry: **15**
+- Big chore / deep clean: **30**
+
+Existing predefined Actions receive the new value only when their stored damage still exactly matches the old stock value. Customized damage values remain untouched.
+
+State schema is now **v11**, adding only `onboarding.infoSeen`. Cloud validation and integration coverage were extended accordingly.
+
 ## Self-hosting
 
 See [DEPLOY.md](DEPLOY.md) for the provider-neutral self-hosting guide.
