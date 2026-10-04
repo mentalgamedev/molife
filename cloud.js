@@ -41,27 +41,51 @@
     return node;
   }
 
+  function readSessionToken(key) {
+    try {
+      return sessionStorage.getItem(key) || '';
+    } catch (error) {
+      return '';
+    }
+  }
+
+  function writeSessionToken(key, value) {
+    if (!value) return;
+    try {
+      sessionStorage.setItem(key, value);
+    } catch (error) {
+      // Hash tokens still work for this page load when storage is unavailable.
+    }
+  }
+
   function captureAuthTokens() {
+    let invite = '';
+    let verify = '';
+
     try {
       const hash = location.hash.startsWith('#') ? location.hash.slice(1) : '';
       const params = new URLSearchParams(hash);
-      const invite = params.get('invite') || '';
-      const verify = params.get('verify') || '';
-
-      if (invite) sessionStorage.setItem(INVITE_SESSION_KEY, invite);
-      if (verify) sessionStorage.setItem(VERIFY_SESSION_KEY, verify);
-
-      if (invite || verify) {
-        history.replaceState(null, '', location.pathname + location.search);
-      }
-
-      return {
-        invite: invite || sessionStorage.getItem(INVITE_SESSION_KEY) || '',
-        verify: verify || sessionStorage.getItem(VERIFY_SESSION_KEY) || ''
-      };
+      invite = params.get('invite') || '';
+      verify = params.get('verify') || '';
     } catch (error) {
-      return { invite: '', verify: '' };
+      // Fall through to any token already preserved in session storage.
     }
+
+    writeSessionToken(INVITE_SESSION_KEY, invite);
+    writeSessionToken(VERIFY_SESSION_KEY, verify);
+
+    if (invite || verify) {
+      try {
+        history.replaceState(null, '', location.pathname + location.search);
+      } catch (error) {
+        // Failure to clean the URL must not invalidate a valid auth token.
+      }
+    }
+
+    return {
+      invite: invite || readSessionToken(INVITE_SESSION_KEY),
+      verify: verify || readSessionToken(VERIFY_SESSION_KEY)
+    };
   }
 
   function clearPendingInvite() {
@@ -478,13 +502,7 @@
   function openAuth(mode) {
     setAuthMode(mode);
     if (!authDialog.open) authDialog.showModal();
-    requestAnimationFrame(() => {
-      if (mode === 'register' && !emailField.hidden) {
-        usernameInput.focus();
-      } else {
-        usernameInput.focus();
-      }
-    });
+    requestAnimationFrame(() => usernameInput.focus());
   }
 
   // ---------------------------------------------------------------------------
