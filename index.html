@@ -9,10 +9,11 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="preload" href="fonts/PunkKid.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=4.20.0">
-  <link rel="stylesheet" href="pawnshop.css?v=4.20.0">
-  <link rel="stylesheet" href="mood.css?v=4.20.0">
-  <link rel="stylesheet" href="metrics.css?v=4.20.0">
+  <link rel="stylesheet" href="styles.css?v=4.21.0">
+  <link rel="stylesheet" href="pawnshop.css?v=4.21.0">
+  <link rel="stylesheet" href="mood.css?v=4.21.0">
+  <link rel="stylesheet" href="metrics.css?v=4.21.0">
+  <link rel="stylesheet" href="settings.css?v=4.21.0">
 </head>
 <body>
   <div class="city-noise" aria-hidden="true"></div>
@@ -31,7 +32,7 @@
       <div class="brand-block">
         <h1 class="brand-title" aria-label="MoLife"><span class="brand-mo">Mo</span><span class="brand-life">Life</span><span class="brand-tm">™</span></h1>
         <div class="brand-subline"><strong>Daily Struggle Assistant</strong><span> · powered by MoThink-6.7</span></div>
-        <div class="app-version" aria-label="MoLife version 4.20.0">v4.20.0 · Joint Committee on Higher Metrics</div>
+        <div class="app-version" aria-label="MoLife version 4.21.0">v4.21.0 · Office of Mandatory Alignment</div>
         <div id="todayLabel" class="muted"></div>
       </div>
       <button id="settingsButton" class="icon-button" type="button" aria-label="Open settings" title="Settings">⚙</button>
@@ -76,34 +77,6 @@
         </div>
       </section>
 
-      <section id="moodPanel" class="mood-panel panel" aria-labelledby="moodHeading">
-        <div class="mood-head">
-          <div>
-            <div class="eyebrow">DAILY SIGNAL // OPTIONAL READING</div>
-            <h2 id="moodHeading">Mood</h2>
-          </div>
-          <strong id="moodValue" class="mood-value" data-level="unlogged">NOT LOGGED</strong>
-        </div>
-
-        <label class="mood-control">
-          <span class="sr-only">Today's mood</span>
-          <input id="moodSlider" type="range" min="-100" max="100" step="5" value="0" aria-label="Today's mood" aria-valuetext="Balanced position, not recorded today">
-          <span class="mood-scale-labels" aria-hidden="true">
-            <span>VERY LOW</span>
-            <span>LOW</span>
-            <span>BALANCED</span>
-            <span>ELEVATED</span>
-            <span>VERY HIGH</span>
-          </span>
-        </label>
-
-        <div id="moodStatus" class="mood-status" role="status" aria-live="polite">MOVE THE SLIDER TO LOG TODAY</div>
-        <div class="mood-actions">
-          <p class="mood-note">Untouched days are not recorded. Move the slider again any time today to update the reading.</p>
-          <button class="mood-trends-button" type="button" data-open-metric="mood">View trend</button>
-        </div>
-      </section>
-
       <section id="victoryBanner" class="victory-banner" hidden>
         <div class="victory-icon">★</div>
         <div class="victory-copy">
@@ -114,16 +87,46 @@
       </section>
 
 
-      <section class="section-head">
-        <div>
-          <div class="eyebrow">DAILY MOVES</div>
-          <h2>Track-o-Tron</h2>
-          <div class="track-subtitle">Choose an attack</div>
-        </div>
-        <div class="balance-note">Mark one category FOCUSED · repeated category attacks build resistance</div>
-      </section>
+      <div class="track-o-tron-zone">
+        <section class="section-head">
+          <div>
+            <div class="eyebrow">DAILY MOVES</div>
+            <h2>Track-o-Tron</h2>
+            <div class="track-subtitle">Choose an attack</div>
+          </div>
+          <div class="balance-note">Mark one category FOCUSED · repeated category attacks build resistance</div>
+        </section>
 
-      <section id="categoriesGrid" class="categories-grid"></section>
+        <section id="categoriesGrid" class="categories-grid"></section>
+
+        <section id="moodPanel" class="mood-panel track-mood-panel panel" aria-labelledby="moodHeading">
+          <div class="mood-head">
+            <div>
+              <div class="eyebrow">TRACK-O-TRON // DAILY SIGNAL</div>
+              <h2 id="moodHeading">Mood</h2>
+            </div>
+            <strong id="moodValue" class="mood-value" data-level="unlogged">NOT LOGGED</strong>
+          </div>
+
+          <label class="mood-control">
+            <span class="sr-only">Today's mood</span>
+            <input id="moodSlider" type="range" min="-100" max="100" step="5" value="0" aria-label="Today's mood" aria-valuetext="Balanced position, not recorded today">
+            <span class="mood-scale-labels" aria-hidden="true">
+              <span>VERY LOW</span>
+              <span>LOW</span>
+              <span>BALANCED</span>
+              <span>ELEVATED</span>
+              <span>VERY HIGH</span>
+            </span>
+          </label>
+
+          <div id="moodStatus" class="mood-status" role="status" aria-live="polite">MOVE THE SLIDER TO LOG TODAY</div>
+          <div class="mood-actions">
+            <p class="mood-note">Untouched days are not recorded. Move the slider again any time today to update the reading.</p>
+            <button class="mood-trends-button" type="button" data-open-metric="mood">View trend</button>
+          </div>
+        </section>
+      </div>
 
       <section id="arsenalPanel" class="arsenal-panel pawnshop-panel panel">
         <div class="arsenal-head">
@@ -409,7 +412,7 @@
         <button id="closeSettingsButton" class="icon-button" aria-label="Close settings" type="button">×</button>
       </div>
 
-      <section class="settings-section">
+      <section class="settings-section daily-challenge-section">
         <h3>Daily challenge</h3>
         <label class="field-row">
           <span>
@@ -656,8 +659,8 @@
     </article>
   </template>
 
-  <script src="app.js?v=4.20.0" defer></script>
-  <script src="metrics-viewer.js?v=4.20.0" defer></script>
-  <script src="cloud.js?v=4.20.0" defer></script>
+  <script src="app.js?v=4.21.0" defer></script>
+  <script src="metrics-viewer.js?v=4.21.0" defer></script>
+  <script src="cloud.js?v=4.21.0" defer></script>
 </body>
 </html>
