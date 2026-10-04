@@ -153,6 +153,34 @@ for (const [id, expected] of expectedDefaultDamage) {
   }
 }
 
+const expectedDamageMigrations = new Map([
+  ['wellbeing-workout-30', [20, 30]],
+  ['wellbeing-walk-20', [10, 15]],
+  ['wellbeing-mobility-10', [5, 10]],
+  ['wellbeing-good-meal', [10, 15]],
+  ['work-focus-25', [15, 25]],
+  ['work-focus-50', [30, 45]],
+  ['work-practice-20', [10, 15]],
+  ['work-admin', [10, 15]],
+  ['chores-small', [5, 10]],
+  ['chores-medium', [10, 20]],
+  ['chores-laundry', [10, 15]],
+  ['chores-big', [20, 30]]
+]);
+const damageMigrations = new Map(
+  [...app.matchAll(/'([^']+)': Object\.freeze\(\[(\d+), (\d+)\]\)/g)]
+    .map(match => [match[1], [Number(match[2]), Number(match[3])]])
+);
+for (const [id, expected] of expectedDamageMigrations) {
+  const actual = damageMigrations.get(id);
+  if (!actual || actual[0] !== expected[0] || actual[1] !== expected[1]) {
+    fail(`Missing or incorrect default-damage migration for ${id}`);
+  }
+}
+if (!app.includes('baseDamage === damageMigration[0]')) {
+  fail('Default-damage migration must only touch actions that still have their stock damage');
+}
+
 if (!app.includes('const STATE_VERSION = 11;')
     || !app.includes('onboarding: {')
     || !app.includes('infoSeen: false')) {
