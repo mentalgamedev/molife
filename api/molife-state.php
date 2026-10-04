@@ -1062,18 +1062,21 @@ function dalli_validate_state_v4(mixed $state): array
 }
 
 
-function dalli_validate_state_v5_v9(mixed $state): array
+function dalli_validate_state_v5_v10(mixed $state): array
 {
     $version = is_array($state) ? ($state['version'] ?? null) : null;
-    $isV6Plus = in_array($version, [6, 7, 8, 9], true);
-    $isV7Plus = in_array($version, [7, 8, 9], true);
-    $isV8Plus = in_array($version, [8, 9], true);
-    $allowedTopLevel = $isV8Plus
-        ? ['version', 'settings', 'progression', 'current', 'history', 'inventory', 'oneOffs']
-        : ['version', 'settings', 'progression', 'current', 'history', 'inventory'];
+    $isV6Plus = in_array($version, [6, 7, 8, 9, 10], true);
+    $isV7Plus = in_array($version, [7, 8, 9, 10], true);
+    $isV8Plus = in_array($version, [8, 9, 10], true);
+    $isV10Plus = $version === 10;
+    $allowedTopLevel = $isV10Plus
+        ? ['version', 'settings', 'progression', 'current', 'history', 'inventory', 'oneOffs', 'metrics']
+        : ($isV8Plus
+            ? ['version', 'settings', 'progression', 'current', 'history', 'inventory', 'oneOffs']
+            : ['version', 'settings', 'progression', 'current', 'history', 'inventory']);
     if (!is_array($state)
         || !dalli_keys_allowed($state, $allowedTopLevel)
-        || !in_array($version, [5, 6, 7, 8, 9], true)) {
+        || !in_array($version, [5, 6, 7, 8, 9, 10], true)) {
         dalli_fail('Unsupported Dalli state.', 422);
     }
 
@@ -1083,10 +1086,13 @@ function dalli_validate_state_v5_v9(mixed $state): array
     $history = $state['history'] ?? null;
     $inventory = $state['inventory'] ?? null;
     $oneOffs = $state['oneOffs'] ?? null;
+    $metrics = $state['metrics'] ?? null;
 
-    $allowedSettings = $isV7Plus
-        ? ['fullEnemyHp', 'focusCategoryId', 'focusFactor', 'resistanceBuildup', 'categories', 'actions', 'combos']
-        : ['fullEnemyHp', 'categories', 'actions', 'combos'];
+    $allowedSettings = $isV10Plus
+        ? ['fullEnemyHp', 'focusCategoryId', 'focusFactor', 'resistanceBuildup', 'chillModeEnabled', 'chillMultiplier', 'categories', 'actions', 'combos']
+        : ($isV7Plus
+            ? ['fullEnemyHp', 'focusCategoryId', 'focusFactor', 'resistanceBuildup', 'categories', 'actions', 'combos']
+            : ['fullEnemyHp', 'categories', 'actions', 'combos']);
 
     if (!is_array($settings)
         || !dalli_keys_allowed($settings, $allowedSettings)
@@ -1148,6 +1154,13 @@ function dalli_validate_state_v5_v9(mixed $state): array
         if (!dalli_number_between($settings['focusFactor'] ?? null, 1, 10)
             || !dalli_number_between($settings['resistanceBuildup'] ?? null, 0, 2)) {
             dalli_fail('Invalid combat tuning.', 422);
+        }
+    }
+
+    if ($isV10Plus) {
+        if (!is_bool($settings['chillModeEnabled'] ?? null)
+            || !dalli_number_between($settings['chillMultiplier'] ?? null, 1.25, 4)) {
+            dalli_fail('Invalid Chill Mode settings.', 422);
         }
     }
 
@@ -1272,6 +1285,42 @@ function dalli_validate_state_v5_v9(mixed $state): array
 
         $comboIds[$id] = true;
     }
+
+    if ($isV10Plus) {
+        if (!is_array($metrics)
+            || !dalli_keys_allowed($metrics, ['daily'])
+            || !is_array($metrics['daily'] ?? null)
+            || count($metrics['daily']) > 3660) {
+            dalli_fail('Invalid daily metrics.', 422);
+        }
+
+        foreach ($metrics['daily'] as $date => $row) {
+            if (!is_string($date)
+                || preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) !== 1
+                || !is_array($row)
+                || count($row) > 32) {
+                dalli_fail('Invalid daily metric row.', 422);
+            }
+
+            foreach ($row as $metric => $value) {
+                if (!is_string($metric)
+                    || preg_match('/^[a-z][a-z0-9_-]{0,31}$/', $metric) !== 1
+                    || (!is_int($value) && !is_float($value))
+                    || !is_finite((float) $value)
+                    || (float) $value < -1000000000
+                    || (float) $value > 1000000000) {
+                    dalli_fail('Invalid daily metric value.', 422);
+                }
+
+                if ($metric === 'mood' && ((float) $value < -100 || (float) $value > 100)) {
+                    dalli_fail('Invalid mood metric.', 422);
+                }
+            }
+        }
+    } elseif ($metrics !== null) {
+        dalli_fail('Daily metrics are not valid for this state version.', 422);
+    }
+
 
     if (!is_array($progression)
         || !dalli_keys_allowed($progression, ['victoryXp', 'bestStreak', 'archivedStreak', 'streakThrough'])
@@ -1675,7 +1724,7 @@ function dalli_validate_state(mixed $state): array
     if ($version === 2) return dalli_validate_state_v2($state);
     if ($version === 3) return dalli_validate_state_v3($state);
     if ($version === 4) return dalli_validate_state_v4($state);
-    if ($version === 5 || $version === 6 || $version === 7 || $version === 8 || $version === 9) return dalli_validate_state_v5_v9($state);
+    if ($version === 5 || $version === 6 || $version === 7 || $version === 8 || $version === 9 || $version === 10) return dalli_validate_state_v5_v10($state);
     dalli_fail('Unsupported Dalli state.', 422);
 }
 
