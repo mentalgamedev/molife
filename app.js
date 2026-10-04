@@ -1819,6 +1819,13 @@
 
     const dates = Object.keys(state.metrics.daily).sort((a, b) => b.localeCompare(a));
     dates.slice(DAILY_METRIC_LIMIT).forEach(oldDate => delete state.metrics.daily[oldDate]);
+
+    let encoded = JSON.stringify(state);
+    const oldestFirst = Object.keys(state.metrics.daily).sort((a, b) => a.localeCompare(b));
+    while (encoded.length > 225000 && oldestFirst.length > 365) {
+      delete state.metrics.daily[oldestFirst.shift()];
+      encoded = JSON.stringify(state);
+    }
     return true;
   }
 
