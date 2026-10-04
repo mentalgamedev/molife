@@ -301,6 +301,17 @@
         circle.append(svgNode('title', {}, `${formatLongDate(point.dateKey)}: ${metric.format(point.value)}`));
         chart.append(circle);
       });
+    } else {
+      const pointCloud = points
+        .filter(point => point.value !== null)
+        .map(point => `M ${point.x.toFixed(2)} ${point.y.toFixed(2)} l 0 0.01`)
+        .join(' ');
+      if (pointCloud) {
+        chart.append(svgNode('path', {
+          d: pointCloud,
+          class: 'metrics-point-cloud'
+        }));
+      }
     }
 
     selectedTickIndexes(dates.length).forEach(index => {
