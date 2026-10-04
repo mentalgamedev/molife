@@ -1145,9 +1145,14 @@
 
   loginTab.addEventListener('click', () => setAuthMode('login'));
   registerTab.addEventListener('click', () => setAuthMode('register'));
-  authCancelButton.addEventListener('click', () => authDialog.close());
-  authDialog.addEventListener('close', () => {
+  authCancelButton.addEventListener('click', () => {
+    authDialog.close();
     if (!user && !pendingVerification) window.DalliApp.completeStartup?.();
+  });
+  authDialog.addEventListener('cancel', () => {
+    window.setTimeout(() => {
+      if (!user && !pendingVerification) window.DalliApp.completeStartup?.();
+    }, 0);
   });
   resendVerificationButton.addEventListener('click', resendVerification);
   accountCloseButton.addEventListener('click', () => accountDialog.close());
