@@ -1,0 +1,112 @@
+/* MoLife v4.21 — Office of Mandatory Alignment */
+
+.daily-challenge-section {
+  padding-bottom: 12px;
+}
+
+.daily-challenge-section > h3 {
+  margin-bottom: 9px;
+}
+
+.daily-challenge-section .field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 116px;
+  align-items: start;
+  gap: 22px;
+  min-width: 0;
+  padding: 11px 0;
+}
+
+.daily-challenge-section .field-row + .field-row {
+  border-top: 1px solid rgba(255,255,255,.045);
+}
+
+.daily-challenge-section .field-row > span:first-child {
+  min-width: 0;
+  padding-top: 1px;
+}
+
+.daily-challenge-section .field-row strong {
+  line-height: 1.2;
+}
+
+.daily-challenge-section .field-row small {
+  max-width: 720px;
+  margin-top: 4px;
+  line-height: 1.38;
+}
+
+.daily-challenge-section #goalInput,
+.daily-challenge-section #focusFactorInput,
+.daily-challenge-section #resistanceBuildupInput,
+.daily-challenge-section #chillMultiplierInput {
+  width: 116px;
+  min-width: 116px;
+  justify-self: end;
+  align-self: start;
+  text-align: right;
+}
+
+.daily-challenge-section .chill-mode-row .chill-toggle {
+  width: 116px;
+  min-width: 116px;
+  justify-self: end;
+  align-self: start;
+  justify-content: center;
+  padding-inline: 10px;
+}
+
+.daily-challenge-section .chill-multiplier-row {
+  transition: none;
+}
+
+.daily-challenge-section .chill-multiplier-row.is-disabled {
+  opacity: 1;
+}
+
+.daily-challenge-section .chill-multiplier-row.is-disabled > span:first-child {
+  opacity: .62;
+}
+
+.daily-challenge-section .chill-multiplier-row.is-disabled > input {
+  opacity: .48;
+}
+
+.track-o-tron-zone {
+  margin-top: 0;
+}
+
+.track-o-tron-zone .track-mood-panel {
+  margin: 16px 0 18px;
+  border-top-color: rgba(122,108,255,.24);
+}
+
+.track-o-tron-zone .track-mood-panel .eyebrow {
+  color: #9299bf;
+}
+
+@media (max-width: 620px) {
+  .daily-challenge-section .field-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 12px 0;
+  }
+
+  .daily-challenge-section #goalInput,
+  .daily-challenge-section #focusFactorInput,
+  .daily-challenge-section #resistanceBuildupInput,
+  .daily-challenge-section #chillMultiplierInput,
+  .daily-challenge-section .chill-mode-row .chill-toggle {
+    width: 100%;
+    min-width: 0;
+    justify-self: stretch;
+  }
+
+  .daily-challenge-section .chill-mode-row .chill-toggle {
+    justify-content: flex-start;
+  }
+
+  .track-o-tron-zone .track-mood-panel {
+    margin-top: 14px;
+  }
+}
