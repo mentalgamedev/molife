@@ -291,11 +291,6 @@ input, select {
   border-radius: 14px;
   background: rgba(255,255,255,.035);
 }
-.category-editor-row.is-editing {
-  padding: 14px;
-  border-color: rgba(122,108,255,.22);
-  background: rgba(122,108,255,.055);
-}
 .category-editor-row.is-fallback {
   border-style: dashed;
   background: rgba(255,255,255,.018);
@@ -333,11 +328,6 @@ input, select {
 .category-meter[hidden] { display: none; }
 .delete-action { width: 36px; height: 36px; border: 1px solid rgba(255,109,122,.12); border-radius: 10px; background: rgba(255,109,122,.06); color: #ff9da7; cursor: pointer; }
 .delete-action:hover { background: rgba(255,109,122,.12); }
-.action-editor-row.is-editing {
-  padding: 14px;
-  border-color: rgba(122,108,255,.22);
-  background: rgba(122,108,255,.055);
-}
 .add-action-card,
 .add-category-card { margin-top: 15px; padding: 16px; border: 1px dashed rgba(255,255,255,.12); border-radius: 16px; background: rgba(255,255,255,.02); }
 .add-action-card h4,
@@ -1384,19 +1374,11 @@ body {
   text-overflow: ellipsis;
 }
 
-.newswire-message.newswire-swap {
-  animation: newswireSwap .34s ease-out;
-}
-
 @keyframes newswirePulse {
   0%, 100% { opacity: .45; transform: scale(.8); }
   50% { opacity: 1; transform: scale(1.12); }
 }
 
-@keyframes newswireSwap {
-  from { opacity: .2; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
 
 .brand-title {
   position: relative;
@@ -1631,11 +1613,9 @@ body {
     flex-wrap: wrap;
     row-gap: 3px;
   }
-}@media (prefers-reduced-motion: reduce){
-  .newswire-live i,
-  .newswire-message.newswire-swap,
-  .day-cleared-flash .hero-card,
-  .day-cleared-flash .newswire {
+}@media (prefers-reduced-motion: reduce){.newswire-live i,
+.day-cleared-flash .hero-card,
+.day-cleared-flash .newswire{
     animation: none !important;
   }
 
@@ -1733,10 +1713,6 @@ body {
   white-space: nowrap;
   transform: translate3d(0,-50%,0);
   will-change: transform;
-}
-
-.newswire-message.newswire-swap {
-  animation: none;
 }
 
 /* Only become an inner scroll surface when there is actually overflow. */
@@ -3930,14 +3906,6 @@ body {
   padding: 24px 0 20px;
 }
 
-.attack-report-kicker {
-  margin-bottom: 5px;
-  color: var(--attack-signal);
-  font-size: .7rem;
-  font-weight: 1000;
-  letter-spacing: .16em;
-}
-
 .attack-report-copy h2 {
   max-width: 14em;
   margin: 0;
@@ -3962,11 +3930,8 @@ body {
   background: color-mix(in srgb, var(--attack-signal) 8%, rgba(255,255,255,.02));
   text-align: right;
   transform: rotate(1.2deg);
-}
-
-.attack-report-impact span,
-.attack-report-grid span,
-.attack-report-extra span {
+}.attack-report-impact span,
+.attack-report-extra span{
   display: block;
   color: var(--muted);
   font-size: .61rem;
@@ -3983,26 +3948,6 @@ body {
   line-height: 1;
   letter-spacing: -.05em;
   text-shadow: 0 0 24px color-mix(in srgb, var(--attack-signal) 24%, transparent);
-}
-
-.attack-report-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 9px;
-}
-
-.attack-report-grid > div {
-  padding: 12px 13px;
-  border: 1px solid rgba(255,255,255,.07);
-  border-radius: 11px;
-  background: rgba(255,255,255,.025);
-}
-
-.attack-report-grid strong {
-  display: block;
-  margin-top: 4px;
-  color: var(--text);
-  font-size: .96rem;
 }
 
 .attack-report-extra {
@@ -4060,21 +4005,6 @@ body {
   font-size: .58rem;
   font-weight: 950;
   letter-spacing: .14em;
-}
-
-.attack-report-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 19px;
-}
-
-.attack-report-footer > span {
-  max-width: 24em;
-  color: var(--muted);
-  font-size: .66rem;
-  line-height: 1.35;
 }
 
 .attack-report-button {
@@ -4141,10 +4071,6 @@ body {
     transform: rotate(-.8deg);
   }
 
-  .attack-report-grid {
-    grid-template-columns: 1fr;
-  }
-
   .attack-report-extra {
     grid-template-columns: 1fr;
     gap: 5px;
@@ -4152,11 +4078,6 @@ body {
 
   .attack-report-extra strong {
     text-align: left;
-  }
-
-  .attack-report-footer {
-    align-items: stretch;
-    flex-direction: column;
   }
 
   .attack-report-button {
