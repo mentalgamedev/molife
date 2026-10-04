@@ -363,6 +363,22 @@ The Mood tracker now belongs to **Track-o-Tron** visually and structurally: it a
 
 State schema remains **v10** and no gameplay, mood, Chill Mode or persistence behavior changes in this release.
 
+## v4.22 — Department of Legacy Disposal
+
+This maintenance pass removes retired frontend code and fixes a few issues uncovered by the audit.
+
+Two stale responsive rules were still affecting the live UI: the old circular XP-orb layout left **92px of unnecessary right padding** on the mobile fight HUD, and the retired `.progression-grid` breakpoint forced the current Street Cred rank card to span the entire dossier grid at intermediate widths. Both obsolete overrides are removed.
+
+The main stylesheet also shed roughly **14 KB** of unused rules from superseded Pawnshop cards, inline inventory inspection, the old XP/fight orbs, old settings editor controls, retired attack-report fragments and related responsive rules. Live inventory, Track-o-Tron, settings editors, attack reports and progression selectors are preserved.
+
+Browser storage handling is more defensive. A failed `localStorage` write no longer aborts the in-memory action or prevents a signed-in cloud save from being queued. Invite/verification hash links also remain usable for the current page load when `sessionStorage` is unavailable in hardened/private browser modes.
+
+A new `tests/frontend-smoke.mjs` maintenance check now verifies duplicate DOM IDs, JavaScript `#id` references, service-worker coverage for local CSS/JS assets, CSS brace structure and a small retired-selector guard. It runs in both CI and the production deployment gate.
+
+Compatibility names such as `DalliApp`, `DALLI_*` constants and the tiny legacy PHP include shims are intentionally retained because they preserve existing local/account migration paths rather than representing unfinished cleanup.
+
+State schema remains **v10** and no gameplay rules change in this release.
+
 ## Self-hosting
 
 See [DEPLOY.md](DEPLOY.md) for the provider-neutral self-hosting guide.
