@@ -355,6 +355,14 @@ The release's entirely serious statistical authority is the **Joint Committee on
 
 State schema remains **v10**; v4.20 adds no new persisted fields or database migration.
 
+## v4.21 — Office of Mandatory Alignment
+
+A small UI-cleanup pass fixes the **Daily Challenge** settings layout. Those rows now use a dedicated two-column grid with a consistent right-hand control column, top-aligned controls, equal numeric widths and a matching Chill Mode toggle. Disabled Chill multiplier styling now dims the disabled content without collapsing the whole row visually. On narrow screens the same rows deliberately stack into one column.
+
+The Mood tracker now belongs to **Track-o-Tron** visually and structurally: it appears immediately below the category/action grid rather than between the fight HUD and Track-o-Tron. Its functionality, daily metric storage and graph integration are unchanged.
+
+State schema remains **v10** and no gameplay, mood, Chill Mode or persistence behavior changes in this release.
+
 ## Self-hosting
 
 See [DEPLOY.md](DEPLOY.md) for the provider-neutral self-hosting guide.
