@@ -159,8 +159,11 @@
   accountButton.append(profileButtonName);
 
   accountZone.append(syncStatus, signInButton, createAccountButton, accountButton);
+  const topbarActions = document.querySelector('.topbar-actions');
   const settingsButton = document.querySelector('#settingsButton');
-  if (settingsButton) {
+  if (topbarActions) {
+    topbarActions.before(accountZone);
+  } else if (settingsButton) {
     settingsButton.before(accountZone);
   } else {
     document.querySelector('.topbar')?.append(accountZone);
@@ -1001,13 +1004,16 @@
     if (!initialState) {
       const guestState = window.DalliApp.getState();
 
+      const freshAccountState = window.DalliApp.getDefaultState();
+      freshAccountState.onboarding.infoSeen = guestState.onboarding?.infoSeen === true;
+
       if (hasMeaningfulLocalState(guestState)) {
         const importLocal = window.confirm(
           `Import the MoLife setup and history currently stored on this device into ${user.username}'s account?\n\nOK = import it\nCancel = start fresh`
         );
-        initialState = importLocal ? guestState : window.DalliApp.getDefaultState();
+        initialState = importLocal ? guestState : freshAccountState;
       } else {
-        initialState = window.DalliApp.getDefaultState();
+        initialState = freshAccountState;
       }
     }
 
