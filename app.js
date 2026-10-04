@@ -250,6 +250,11 @@
     totalDamage: document.querySelector('#totalDamage'),
     overkillValue: document.querySelector('#overkillValue'),
     fightFeedback: document.querySelector('#fightFeedback'),
+    chillBadge: document.querySelector('#chillBadge'),
+    moodPanel: document.querySelector('#moodPanel'),
+    moodSlider: document.querySelector('#moodSlider'),
+    moodValue: document.querySelector('#moodValue'),
+    moodStatus: document.querySelector('#moodStatus'),
     combosPanel: document.querySelector('#combosPanel'),
     arsenalPanel: document.querySelector('#arsenalPanel'),
     arsenalList: document.querySelector('#arsenalList'),
@@ -329,6 +334,9 @@
     goalPreview: document.querySelector('#goalPreview'),
     focusFactorInput: document.querySelector('#focusFactorInput'),
     resistanceBuildupInput: document.querySelector('#resistanceBuildupInput'),
+    chillModeInput: document.querySelector('#chillModeInput'),
+    chillMultiplierInput: document.querySelector('#chillMultiplierInput'),
+    chillMultiplierRow: document.querySelector('#chillMultiplierRow'),
     categoriesEditor: document.querySelector('#categoriesEditor'),
     newCategoryName: document.querySelector('#newCategoryName'),
     newCategoryIcon: document.querySelector('#newCategoryIcon'),
@@ -373,6 +381,7 @@
   let dayCardTimer = null;
   let pendingVictoryReport = false;
   let settingsSaveTimer = null;
+  let moodSaveTimer = null;
   let settingsBackgroundScrollY = 0;
   let actionDrag = null;
   const categoryScrollPositions = new Map();
@@ -1778,6 +1787,79 @@
   }
 
 
+  function getDailyMetric(date, metric) {
+    const value = state.metrics?.daily?.[date]?.[metric];
+    return Number.isFinite(Number(value)) ? Number(value) : null;
+  }
+
+  function moodLabel(value) {
+    const mood = clampNumber(value, MOOD_MIN, MOOD_MAX, 0);
+    if (mood <= -60) return 'VERY LOW';
+    if (mood <= -20) return 'LOW';
+    if (mood < 20) return 'BALANCED';
+    if (mood < 60) return 'ELEVATED';
+    return 'VERY HIGH';
+  }
+
+  function normalizeMoodValue(value) {
+    const clamped = clampNumber(value, MOOD_MIN, MOOD_MAX, 0);
+    return Math.round(clamped / MOOD_STEP) * MOOD_STEP;
+  }
+
+  function setDailyMetric(date, metric, value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date))) return false;
+    if (!/^[a-z][a-z0-9_-]{0,31}$/.test(String(metric))) return false;
+    if (!state.metrics || typeof state.metrics !== 'object') state.metrics = { daily: {} };
+    if (!state.metrics.daily || typeof state.metrics.daily !== 'object') state.metrics.daily = {};
+    if (!state.metrics.daily[date]) state.metrics.daily[date] = {};
+
+    state.metrics.daily[date][metric] = metric === 'mood'
+      ? normalizeMoodValue(value)
+      : clampNumber(value, -1000000000, 1000000000, 0);
+
+    const dates = Object.keys(state.metrics.daily).sort((a, b) => b.localeCompare(a));
+    dates.slice(DAILY_METRIC_LIMIT).forEach(oldDate => delete state.metrics.daily[oldDate]);
+    return true;
+  }
+
+  function renderMoodTracker() {
+    if (!els.moodSlider || !state.current.date) return;
+    const recordedMood = getDailyMetric(state.current.date, 'mood');
+    const recorded = recordedMood !== null;
+    const value = recorded ? normalizeMoodValue(recordedMood) : 0;
+    const label = moodLabel(value);
+
+    els.moodSlider.value = String(value);
+    els.moodSlider.setAttribute('aria-valuetext', recorded
+      ? label
+      : 'Balanced position, not recorded today');
+    els.moodValue.textContent = recorded ? label : 'NOT LOGGED';
+    els.moodValue.dataset.level = recorded ? label.toLowerCase().replace(/\s+/g, '-') : 'unlogged';
+    els.moodStatus.textContent = recorded
+      ? 'TODAY\'S MOOD RECORDED · MOVE AGAIN TO UPDATE'
+      : 'MOVE THE SLIDER TO LOG TODAY';
+    els.moodPanel?.classList.toggle('has-reading', recorded);
+  }
+
+  function recordMood(value, { persist = false } = {}) {
+    ensureToday();
+    if (!setDailyMetric(state.current.date, 'mood', value)) return;
+    renderMoodTracker();
+
+    window.clearTimeout(moodSaveTimer);
+    if (persist) {
+      moodSaveTimer = null;
+      saveState();
+      return;
+    }
+
+    moodSaveTimer = window.setTimeout(() => {
+      moodSaveTimer = null;
+      saveState();
+    }, 180);
+  }
+
+
   function archiveCurrentDay() {
     if (!state.current.date) return;
 
@@ -2514,6 +2596,7 @@
     const summary = getSummary();
 
     renderHero(summary);
+    renderMoodTracker();
     renderProgression();
     renderPawnshop(summary, options.lootClaimed?.id || '');
     renderCategories(summary);
@@ -2725,6 +2808,16 @@
     if (els.tenaciousBadge) {
       els.tenaciousBadge.hidden = !summary.isTenacious;
       els.tenaciousBadge.textContent = 'TENACIOUS';
+    }
+    if (els.chillBadge) {
+      const chillMultiplier = clampNumber(
+        state.settings.chillMultiplier,
+        CHILL_MULTIPLIER_MIN,
+        CHILL_MULTIPLIER_MAX,
+        DEFAULT_CHILL_MULTIPLIER
+      );
+      els.chillBadge.hidden = state.settings.chillModeEnabled !== true;
+      els.chillBadge.textContent = `CHILL MODE ×${Number(chillMultiplier.toFixed(2)).toString()}`;
     }
     if (els.tenaciousStatus) {
       els.tenaciousStatus.hidden = !summary.isTenacious;
@@ -3112,7 +3205,12 @@
               : action.type === 'once'
                 ? 'Daily'
                 : 'Repeatable';
-            small.textContent = payout === 100 ? `${typeText} · full base damage` : `${typeText} · ${payout}% of base damage`;
+            const chillText = reward.chillMultiplier > 1
+              ? ` · CHILL ×${Number(reward.chillMultiplier.toFixed(2)).toString()}`
+              : '';
+            small.textContent = payout === 100
+              ? `${typeText} · full base damage${chillText}`
+              : `${typeText} · ${payout}% of base damage${chillText}`;
           }
 
           nameWrap.append(strong);
@@ -3145,7 +3243,9 @@
           badge.className = 'one-off-badge';
           badge.textContent = 'ONE-OFF';
           const small = document.createElement('small');
-          small.textContent = 'Disappears when done';
+          small.textContent = reward.chillMultiplier > 1
+            ? `Disappears when done · CHILL ×${Number(reward.chillMultiplier.toFixed(2)).toString()}`
+            : 'Disappears when done';
           nameWrap.append(strong, badge, small);
 
           const damage = document.createElement('span');
@@ -3429,6 +3529,14 @@
   }
 
 
+  function syncChillSettingsControls() {
+    if (!els.chillModeInput || !els.chillMultiplierInput) return;
+    const enabled = els.chillModeInput.checked;
+    els.chillMultiplierInput.disabled = !enabled;
+    els.chillMultiplierRow?.classList.toggle('is-disabled', !enabled);
+  }
+
+
   function openSettings() {
     settingsDraft = deepClone(state.settings);
     settingsDraft.categories = ensureUncategorizedCategory(settingsDraft.categories);
@@ -3436,6 +3544,14 @@
     els.goalInput.value = settingsDraft.fullEnemyHp;
     els.focusFactorInput.value = clampNumber(settingsDraft.focusFactor, 1, 10, DEFAULT_FOCUS_FACTOR);
     els.resistanceBuildupInput.value = clampNumber(settingsDraft.resistanceBuildup, 0, 2, DEFAULT_RESISTANCE_BUILDUP);
+    els.chillModeInput.checked = settingsDraft.chillModeEnabled === true;
+    els.chillMultiplierInput.value = clampNumber(
+      settingsDraft.chillMultiplier,
+      CHILL_MULTIPLIER_MIN,
+      CHILL_MULTIPLIER_MAX,
+      DEFAULT_CHILL_MULTIPLIER
+    );
+    syncChillSettingsControls();
     els.settingsMessage.textContent = 'Changes save automatically. Enemy HP and Required-for-victory changes apply to the next daily fight.';
     if (els.newCategoryColor) {
       const customCount = settingsDraft.categories.filter(
@@ -4329,6 +4445,13 @@
           2,
           settingsDraft.resistanceBuildup ?? DEFAULT_RESISTANCE_BUILDUP
         ).toFixed(2)),
+        chillModeEnabled: els.chillModeInput.checked,
+        chillMultiplier: Number(clampNumber(
+          els.chillMultiplierInput.value,
+          CHILL_MULTIPLIER_MIN,
+          CHILL_MULTIPLIER_MAX,
+          settingsDraft.chillMultiplier ?? DEFAULT_CHILL_MULTIPLIER
+        ).toFixed(2)),
         categories,
         actions,
         combos
@@ -4464,7 +4587,7 @@
       const importedName = typeof payload.name === 'string' ? payload.name.slice(0, 60) : '';
 
       const confirmed = window.confirm(
-        'Switch to this MoLife settings template?\n\nThis replaces difficulty, focused-category tuning, resistance buildup, categories/colors, reusable actions, ordering, Required-for-victory flags and combos. Your One-offs, fight history, Level, Street Cred, streak, today’s recorded damage and Pawnshop items stay untouched.'
+        'Switch to this MoLife settings template?\n\nThis replaces difficulty, focused-category tuning, resistance buildup, Chill Mode, categories/colors, reusable actions, ordering, Required-for-victory flags and combos. Your One-offs, fight history, Level, Street Cred, streak, today’s recorded damage and Pawnshop items stay untouched.'
       );
       if (!confirmed) return;
 
@@ -4485,6 +4608,9 @@
       els.goalInput.value = settingsDraft.fullEnemyHp;
       els.focusFactorInput.value = settingsDraft.focusFactor;
       els.resistanceBuildupInput.value = settingsDraft.resistanceBuildup;
+      els.chillModeInput.checked = settingsDraft.chillModeEnabled === true;
+      els.chillMultiplierInput.value = settingsDraft.chillMultiplier;
+      syncChillSettingsControls();
       if (els.templateName) els.templateName.value = importedName;
       updateGoalPreview();
       renderCategoriesEditor();
@@ -4564,6 +4690,9 @@
     guestStorageKey: STORAGE_KEY
   });
 
+  els.moodSlider?.addEventListener('input', () => recordMood(els.moodSlider.value));
+  els.moodSlider?.addEventListener('change', () => recordMood(els.moodSlider.value, { persist: true }));
+
   els.settingsButton.addEventListener('click', openSettings);
   els.closeSettingsButton?.addEventListener('click', closeSettings);
 
@@ -4578,10 +4707,13 @@
     const editsExistingSetting = target === els.goalInput
       || target === els.focusFactorInput
       || target === els.resistanceBuildupInput
+      || target === els.chillModeInput
+      || target === els.chillMultiplierInput
       || target.closest?.('.category-direct-editor, .action-direct-editor, .combo-direct-editor');
 
+    if (target === els.chillModeInput) syncChillSettingsControls();
     if (editsExistingSetting) {
-      scheduleSettingsSave(target.type === 'color' ? 0 : 260);
+      scheduleSettingsSave(target.type === 'color' || target === els.chillModeInput ? 0 : 260);
     }
   });
 
@@ -4591,6 +4723,8 @@
     if (target === els.goalInput
       || target === els.focusFactorInput
       || target === els.resistanceBuildupInput
+      || target === els.chillModeInput
+      || target === els.chillMultiplierInput
       || target.closest?.('.category-direct-editor, .action-direct-editor, .combo-direct-editor')) {
       scheduleSettingsSave(0);
     }
