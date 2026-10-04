@@ -341,6 +341,20 @@ The Resistance help text is also simplified to explain the setting direction dir
 
 The graph/history viewer remains intentionally out of scope for this release. The daily-metric format is designed as the input for that later generic visualization layer.
 
+## v4.20 — Joint Committee on Higher Metrics
+
+The deferred visualization layer is now live as a reusable **Data Terminal**. Mood is the first metric provider, but the graph code is metric-agnostic: each provider supplies its reader, fixed domain, baseline, labels and value formatter, allowing later damage/action/category metrics to reuse the same overlay.
+
+The terminal supports **Week**, **Month**, **Year** and **Custom** date ranges. Week/Month/Year represent the trailing 7/30/365 calendar days including today. Custom views can span up to 3,660 days, matching the long-term daily-metric storage horizon.
+
+Mood uses a fixed **-100…+100** scale with **Balanced = 0** as an explicit baseline. Unlogged days remain real gaps in the primary series and are never substituted with zero/Balanced. An optional dashed **7-day trend** averages only available readings in each trailing seven-day window and explicitly states that missing days are ignored rather than imputed.
+
+Summary cards show recorded-day coverage, average, lowest and highest readings for the selected range. The chart remains descriptive only: Mood is still treated as a self-reported signal, not a diagnosis.
+
+The release's entirely serious statistical authority is the **Joint Committee on Higher Metrics**, operating under an equally serious **04:20 Elevated Data Clearance**. The Committee denies that the version number influenced this naming decision.
+
+State schema remains **v10**; v4.20 adds no new persisted fields or database migration.
+
 ## Self-hosting
 
 See [DEPLOY.md](DEPLOY.md) for the provider-neutral self-hosting guide.

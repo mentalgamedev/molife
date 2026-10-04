@@ -39,6 +39,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check app.js
+          node --check metrics-viewer.js
           node --check cloud.js
           node --check service-worker.js
           find . -name '*.php' -not -path './.git/*' -print0 | xargs -0 -n1 php -l
