@@ -355,11 +355,15 @@ input, select {
   45% { transform: scale(1.03); }
   100% { transform: scale(1); }
 }
-.victory-pop { animation: pulseVictory .42s ease; }@media (max-width: 880px){
+.victory-pop { animation: pulseVictory .42s ease; }
+
+@media (max-width: 880px){
   .categories-grid { grid-template-columns: 1fr; }
   .lower-grid { grid-template-columns: 1fr; }
   .add-action-grid, .add-category-grid { grid-template-columns: 1fr 1fr; }
-}@media (max-width: 620px){
+}
+
+@media (max-width: 620px){
   .app-shell { width: min(100% - 20px, 1180px); padding-top: 16px; }
   .hero-card { padding: 21px; grid-template-columns: 1fr; }
   .hero-card h2 { font-size: 3rem; }
@@ -374,7 +378,9 @@ input, select {
   .add-action-grid, .add-category-grid { grid-template-columns: 1fr; }
   .settings-card { padding: 18px; }
   .settings-head { top: -18px; margin: -18px -18px 0; padding: 18px; }
-}@media (prefers-reduced-motion: reduce){
+}
+
+@media (prefers-reduced-motion: reduce){
   *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
 }
 
@@ -480,7 +486,9 @@ input, select {
 
 .login-buttons .secondary-button {
   margin-top: 0;
-}@media (max-width: 620px){
+}
+
+@media (max-width: 620px){
   .topbar {
     align-items: flex-start;
     flex-wrap: wrap;
@@ -713,7 +721,9 @@ input, select {
 
 .danger-button:hover {
   background: rgba(255,109,122,.14);
-}@media (max-width: 620px){
+}
+
+@media (max-width: 620px){
   .account-zone {
     flex-wrap: wrap;
   }
@@ -1235,8 +1245,10 @@ body {
 .danger-zone .danger-button { flex: 0 0 auto; }
 .settings-message {
   color: #e6c86c;
-}@media (max-width: 980px){
-}@media (max-width: 760px){
+}
+
+
+@media (max-width: 760px){
   .category-direct-editor,
   .action-direct-editor {
     grid-template-columns: 1fr 1fr;
@@ -1245,7 +1257,9 @@ body {
   .action-direct-editor .delete-action {
     justify-self: end;
   }
-}@media (max-width: 620px){
+}
+
+@media (max-width: 620px){
   .brand-subline { font-size: .72rem; }
   .hero-sticker { display: none; }
   .rank-stamp {
@@ -1290,7 +1304,9 @@ body {
     width: 100%;
     margin-top: 4px;
   }
-}@media (prefers-reduced-motion: reduce){
+}
+
+@media (prefers-reduced-motion: reduce){
   .brand-title,
   .category-card,
   .day-card,
@@ -1581,7 +1597,9 @@ body {
 
 .corp-footer-dot {
   color: #424956;
-}@media (max-width: 620px){
+}
+
+@media (max-width: 620px){
   .newswire {
     gap: 6px;
     margin-bottom: 12px;
@@ -1613,7 +1631,9 @@ body {
     flex-wrap: wrap;
     row-gap: 3px;
   }
-}@media (prefers-reduced-motion: reduce){.newswire-live i,
+}
+
+@media (prefers-reduced-motion: reduce){.newswire-live i,
 .day-cleared-flash .hero-card,
 .day-cleared-flash .newswire{
     animation: none !important;
@@ -1800,7 +1820,9 @@ body {
     min-height: 220px;
   }
 
-}@media (prefers-reduced-motion: reduce){
+}
+
+@media (prefers-reduced-motion: reduce){
   .newswire-message {
     position: static;
     display: block;
@@ -1893,7 +1915,9 @@ body {
 
 .new-action-visibility {
   min-width: 0;
-}@media (max-width: 880px){
+}
+
+@media (max-width: 880px){
   .add-action-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -1905,7 +1929,9 @@ body {
   .action-direct-editor .delete-action {
     justify-self: end;
   }
-}@media (max-width: 620px){
+}
+
+@media (max-width: 620px){
   .add-action-grid,
   .action-direct-editor {
     grid-template-columns: 1fr;
@@ -2041,7 +2067,9 @@ body {
 
 .category-editor-row:not(.is-fallback) {
   border-left-color: color-mix(in srgb, var(--editor-category-color, var(--accent)) 42%, rgba(255,255,255,.05));
-}@media (max-width: 760px){
+}
+
+@media (max-width: 760px){
   .category-direct-editor,
   .add-category-grid {
     grid-template-columns: 1fr 1fr;
@@ -2050,7 +2078,9 @@ body {
   .category-color-field input[type="color"] {
     max-width: 90px;
   }
-}@media (max-width: 620px){
+}
+
+@media (max-width: 620px){
   .newswire-wide {
     margin-bottom: 14px;
   }
@@ -2158,7 +2188,9 @@ body {
 
 .is-reordering-actions {
   user-select: none;
-}@media (max-width: 760px){
+}
+
+@media (max-width: 760px){
   .action-settings-head {
     align-items: stretch;
     flex-direction: column;
@@ -2480,7 +2512,9 @@ body {
   grid-template-columns: minmax(0, 1fr) minmax(120px, .35fr);
   gap: 10px;
   margin-bottom: 10px;
-}@media (max-width: 760px){
+}
+
+@media (max-width: 760px){
   .combo-editor-head {
     grid-template-columns: minmax(0, 1fr) minmax(100px, .45fr);
   }
@@ -2498,7 +2532,9 @@ body {
   .day-battle-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-}@media (max-width: 620px){
+}
+
+@media (max-width: 620px){
   .fight-stats {
     padding-right: 76px;
   }
@@ -2544,7 +2580,9 @@ body {
   .combo-editor-status {
     text-align: left;
   }
-}@media (prefers-reduced-motion: reduce){
+}
+
+@media (prefers-reduced-motion: reduce){
   .fight-feedback-pop {
     animation: none;
     opacity: 1;
@@ -2612,7 +2650,9 @@ body {
     opacity: 1;
     transform: rotate(-13deg) scale(1);
   }
-}@media (min-width: 621px) and (max-height: 760px){
+}
+
+@media (min-width: 621px) and (max-height: 760px){
   .day-card-dialog {
     width: min(680px, calc(100vw - 16px));
     max-height: calc(100dvh - 10px);
@@ -2657,7 +2697,9 @@ body {
     margin-top: 15px;
     padding-top: 9px;
   }
-}@media (prefers-reduced-motion: reduce){
+}
+
+@media (prefers-reduced-motion: reduce){
   .day-card-dialog[open],
   .day-card-dialog[open]::backdrop,
   .day-card-dialog[open].is-victory-reveal .day-card::after {
@@ -3091,7 +3133,9 @@ body {
 .underworld-grid .rank-hint,
 .underworld-grid .mini-stat-note {
   color: #8992a1;
-}@media (max-width: 620px){
+}
+
+@media (max-width: 620px){
   .fight-card {
     padding: 20px 18px 21px 22px;
     border-radius: 16px;
@@ -3129,7 +3173,9 @@ body {
   .underworld-grid .rank-card {
     padding-right: 92px;
   }
-}@media (prefers-reduced-motion: reduce){
+}
+
+@media (prefers-reduced-motion: reduce){
   .fight-card.is-hud-live .hero-progress-fill,
   .fight-card.is-hud-live .enemy-health-trail,
   .fight-card .fight-feedback-pop,
@@ -3177,7 +3223,9 @@ body {
 @keyframes criticalThreatPulse {
   from { opacity: .72; }
   to { opacity: 1; }
-}@media (prefers-reduced-motion: reduce){
+}
+
+@media (prefers-reduced-motion: reduce){
   .fight-card[data-health="critical"]::after {
     animation: none !important;
   }
@@ -3338,7 +3386,9 @@ body {
 .template-status {
   min-height: 1.1em;
   margin-top: 8px;
-}@media (max-width: 620px){
+}
+
+@media (max-width: 620px){
   .arsenal-head {
     flex-direction: column;
   }
@@ -3350,8 +3400,10 @@ body {
   .loot-crate {
     width: 100%;
   }
-}@media (max-width: 410px){
-}@media (prefers-reduced-motion: reduce){
+}
+
+
+@media (prefers-reduced-motion: reduce){
   .loot-drop:not([hidden]) .loot-crate {
     animation: none !important;
   }
@@ -3373,7 +3425,6 @@ body {
     transform: none;
     filter: none;
   }
-}@media (prefers-reduced-motion: reduce){
 }
 
 
@@ -3492,7 +3543,9 @@ body {
   font-size: .72rem;
   font-weight: 900;
   letter-spacing: .04em;
-}@media (max-width: 620px){
+}
+
+@media (max-width: 620px){
   .corp-footer {
     gap: 8px;
   }
@@ -3607,8 +3660,10 @@ body {
 
 .item-log-row {
   box-shadow: inset 3px 0 0 #d79838;
-}@media (hover: none){
-}@media (prefers-reduced-motion: reduce){
+}
+
+
+@media (prefers-reduced-motion: reduce){
   .fight-card.is-tenacious,
   .tenacious-badge {
     transition: none !important;
@@ -3708,12 +3763,16 @@ body {
   background: rgba(94, 73, 22, .14);
   box-shadow: none;
   opacity: .88;
-}@media (max-width: 880px){
+}
+
+@media (max-width: 880px){
   .action-direct-editor,
   .add-action-grid {
     grid-template-columns: 1fr 1fr;
   }
-}@media (max-width: 620px){
+}
+
+@media (max-width: 620px){
   .action-direct-editor,
   .add-action-grid {
     grid-template-columns: 1fr;
@@ -3788,7 +3847,9 @@ body {
 
 .add-category-grid {
   grid-template-columns: minmax(180px, 1.6fr) 76px 76px;
-}@media (max-width: 620px){
+}
+
+@media (max-width: 620px){
   .category-head {
     align-items: flex-start;
     gap: 10px;
@@ -4041,7 +4102,9 @@ body {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
-}@media (max-width: 620px){
+}
+
+@media (max-width: 620px){
   .attack-report-dialog {
     width: min(100% - 12px, 640px);
     max-height: calc(100dvh - 10px);
@@ -4083,7 +4146,9 @@ body {
   .attack-report-button {
     width: 100%;
   }
-}@media (prefers-reduced-motion: reduce){
+}
+
+@media (prefers-reduced-motion: reduce){
   .attack-report-card.attack-report-enter {
     animation: none !important;
   }
@@ -4313,7 +4378,9 @@ body {
 .one-off-remove:focus-visible {
   outline: 2px solid var(--category-color, var(--accent));
   outline-offset: 2px;
-}@media (max-width: 620px){
+}
+
+@media (max-width: 620px){
   .attack-report-dialog {
     width: calc(100vw - 12px);
     max-height: 78dvh;
@@ -4450,7 +4517,9 @@ body {
   line-height: 1.15;
   text-overflow: ellipsis;
   white-space: nowrap;
-}@media (max-width: 900px){
+}
+
+@media (max-width: 900px){
   .progression-panel {
     grid-template-columns: minmax(0, 1.5fr) minmax(170px, .75fr);
   }
@@ -4461,7 +4530,9 @@ body {
     border-top: 1px solid rgba(255,255,255,.075);
     border-left: 0;
   }
-}@media (max-width: 620px){
+}
+
+@media (max-width: 620px){
   .progression-panel {
     grid-template-columns: 1fr;
   }
@@ -4637,7 +4708,9 @@ body {
 
 .attack-report-dialog.is-victory .attack-report-card {
   --attack-signal: #5ce3b9;
-}@media (max-width: 620px){
+}
+
+@media (max-width: 620px){
   .attack-report-impact span {
     font-size: .51rem;
   }
@@ -4823,7 +4896,9 @@ button.inventory-slot.is-selected {
 
 .inventory-slot.is-new {
   animation: contrabandReveal .62s cubic-bezier(.18,.86,.2,1);
-}@media (max-width: 620px){
+}
+
+@media (max-width: 620px){
   .inventory-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -4832,7 +4907,9 @@ button.inventory-slot.is-selected {
     min-height: 104px;
     padding: 9px 10px;
   }
-}@media (prefers-reduced-motion: reduce){
+}
+
+@media (prefers-reduced-motion: reduce){
   .inventory-slot.is-new {
     animation: none !important;
   }
