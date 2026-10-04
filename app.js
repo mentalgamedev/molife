@@ -976,7 +976,7 @@
           const number = Number(rawValue);
           if (!Number.isFinite(number)) return;
           clean[metric] = metric === 'mood'
-            ? Math.round(clampNumber(number, MOOD_MIN, MOOD_MAX, 0))
+            ? Math.round(clampNumber(number, MOOD_MIN, MOOD_MAX, 0) / MOOD_STEP) * MOOD_STEP
             : clampNumber(number, -1000000000, 1000000000, 0);
         });
         if (Object.keys(clean).length) daily[date] = clean;
@@ -4594,7 +4594,7 @@
       const importedName = typeof payload.name === 'string' ? payload.name.slice(0, 60) : '';
 
       const confirmed = window.confirm(
-        'Switch to this MoLife settings template?\n\nThis replaces difficulty, focused-category tuning, resistance buildup, Chill Mode, categories/colors, reusable actions, ordering, Required-for-victory flags and combos. Your One-offs, fight history, Level, Street Cred, streak, today’s recorded damage and Pawnshop items stay untouched.'
+        'Switch to this MoLife settings template?\n\nThis replaces difficulty, focused-category tuning, resistance buildup, Chill Mode, categories/colors, reusable actions, ordering, Required-for-victory flags and combos. Your One-offs, fight history, mood history, Level, Street Cred, streak, today’s recorded damage and Pawnshop items stay untouched.'
       );
       if (!confirmed) return;
 
