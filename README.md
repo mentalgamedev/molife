@@ -329,6 +329,18 @@ The inventory selection remains transient UI state and is never persisted. Item 
 
 This pass also includes a conservative frontend-performance cleanup: the Newswire caches its text width instead of measuring layout every animation frame, limits visual updates to roughly 30 fps, stops its animation loop while hidden or reduced-motion is active, action-deck scroll measurements are throttled to animation frames, and narrow/mobile dialog backdrops avoid GPU-heavy blur. A code-audit report with larger follow-up opportunities is in [PERFORMANCE.md](PERFORMANCE.md).
 
+## v4.19 — Bureau of Emotional Weather
+
+MoLife now includes an optional daily mood signal. The slider starts visually at **Balanced**, but that default position is not recorded: a day receives a mood entry only after the user actually moves the control. The last position selected on that date wins, and the value is stored immediately in generic daily-metric storage so future graphing can query mood without a mood-specific history format. The current scale is **Very Low → Low → Balanced → Elevated → Very High**; the tracker records self-reported state only and does not interpret or diagnose it.
+
+The state schema is now **v10** with generic `metrics.daily` storage, retaining up to roughly ten years of daily metric rows when state size permits and preserving at least one year when payload trimming is needed. Existing v9 users migrate with an empty metric history. The v9→v10 migration explicitly does not re-grant the v9 starter MoLight to users who already consumed it.
+
+**Chill Mode** is a persistent challenge setting that increases normal Action and One-off damage by a configurable **1.25×–4×** multiplier (default **2×**) so a daily fight can require less activity. It is applied after Focus and Resistance, leaves Pawnshop-item damage unchanged, and naturally increases combo bonuses because combos are calculated from the effective damage of their source Actions. Chill Mode is visible on the fight HUD while active and is included in exported challenge templates; mood history is not.
+
+The Resistance help text is also simplified to explain the setting direction directly: **0 = no resistance, 1 = normal resistance, higher values make resistance stronger.**
+
+The graph/history viewer remains intentionally out of scope for this release. The daily-metric format is designed as the input for that later generic visualization layer.
+
 ## Self-hosting
 
 See [DEPLOY.md](DEPLOY.md) for the provider-neutral self-hosting guide.

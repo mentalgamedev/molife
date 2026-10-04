@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const STATE_VERSION = 9;
+  const STATE_VERSION = 10;
   const TEMPLATE_VERSION = 1;
   const ITEM_DROP_CHANCE = 0.40;
   const ITEM_CAPACITY = 8;
@@ -13,6 +13,13 @@
   const CATEGORY_RESISTANCE = Object.freeze([1, 0.65, 0.40, 0.25]);
   const DEFAULT_FOCUS_FACTOR = 1.5;
   const DEFAULT_RESISTANCE_BUILDUP = 0.75;
+  const DEFAULT_CHILL_MULTIPLIER = 2;
+  const CHILL_MULTIPLIER_MIN = 1.25;
+  const CHILL_MULTIPLIER_MAX = 4;
+  const DAILY_METRIC_LIMIT = 3660;
+  const MOOD_MIN = -100;
+  const MOOD_MAX = 100;
+  const MOOD_STEP = 5;
   const REQUIRED_COUNT_MAX = 1000;
   const VICTORY_XP = 20;
   const COMBO_MIN_MULTIPLIER = 1.05;
@@ -178,6 +185,8 @@
       focusCategoryId: 'work',
       focusFactor: DEFAULT_FOCUS_FACTOR,
       resistanceBuildup: DEFAULT_RESISTANCE_BUILDUP,
+      chillModeEnabled: false,
+      chillMultiplier: DEFAULT_CHILL_MULTIPLIER,
       categories: [
         { id: 'wellbeing', name: 'Wellbeing', icon: '♥', color: '#49d89b' },
         { id: 'work', name: 'Work', icon: '◆', color: '#818bff' },
@@ -210,6 +219,9 @@
       items: []
     },
     oneOffs: [],
+    metrics: {
+      daily: {}
+    },
     current: {
       date: '',
       maxHp: 0,
@@ -238,6 +250,11 @@
     totalDamage: document.querySelector('#totalDamage'),
     overkillValue: document.querySelector('#overkillValue'),
     fightFeedback: document.querySelector('#fightFeedback'),
+    chillBadge: document.querySelector('#chillBadge'),
+    moodPanel: document.querySelector('#moodPanel'),
+    moodSlider: document.querySelector('#moodSlider'),
+    moodValue: document.querySelector('#moodValue'),
+    moodStatus: document.querySelector('#moodStatus'),
     combosPanel: document.querySelector('#combosPanel'),
     arsenalPanel: document.querySelector('#arsenalPanel'),
     arsenalList: document.querySelector('#arsenalList'),
@@ -317,6 +334,9 @@
     goalPreview: document.querySelector('#goalPreview'),
     focusFactorInput: document.querySelector('#focusFactorInput'),
     resistanceBuildupInput: document.querySelector('#resistanceBuildupInput'),
+    chillModeInput: document.querySelector('#chillModeInput'),
+    chillMultiplierInput: document.querySelector('#chillMultiplierInput'),
+    chillMultiplierRow: document.querySelector('#chillMultiplierRow'),
     categoriesEditor: document.querySelector('#categoriesEditor'),
     newCategoryName: document.querySelector('#newCategoryName'),
     newCategoryIcon: document.querySelector('#newCategoryIcon'),
@@ -361,6 +381,7 @@
   let dayCardTimer = null;
   let pendingVictoryReport = false;
   let settingsSaveTimer = null;
+  let moodSaveTimer = null;
   let settingsBackgroundScrollY = 0;
   let actionDrag = null;
   const categoryScrollPositions = new Map();
@@ -923,9 +944,50 @@
     return migrated;
   }
 
+  function migrateV9State(candidate) {
+    const migrated = deepClone(candidate);
+    migrated.version = STATE_VERSION;
+    migrated.settings = {
+      ...(migrated.settings || {}),
+      chillModeEnabled: false,
+      chillMultiplier: DEFAULT_CHILL_MULTIPLIER
+    };
+    migrated.metrics = migrated.metrics && typeof migrated.metrics === 'object'
+      ? migrated.metrics
+      : { daily: {} };
+    return migrated;
+  }
+
+  function normalizeMetrics(value) {
+    const source = value?.daily && typeof value.daily === 'object' && !Array.isArray(value.daily)
+      ? value.daily
+      : {};
+    const daily = {};
+    Object.keys(source)
+      .filter(date => /^\d{4}-\d{2}-\d{2}$/.test(date))
+      .sort((a, b) => b.localeCompare(a))
+      .slice(0, DAILY_METRIC_LIMIT)
+      .forEach(date => {
+        const row = source[date];
+        if (!row || typeof row !== 'object' || Array.isArray(row)) return;
+        const clean = {};
+        Object.entries(row).forEach(([metric, rawValue]) => {
+          if (!/^[a-z][a-z0-9_-]{0,31}$/.test(metric)) return;
+          const number = Number(rawValue);
+          if (!Number.isFinite(number)) return;
+          clean[metric] = metric === 'mood'
+            ? Math.round(clampNumber(number, MOOD_MIN, MOOD_MAX, 0) / MOOD_STEP) * MOOD_STEP
+            : clampNumber(number, -1000000000, 1000000000, 0);
+        });
+        if (Object.keys(clean).length) daily[date] = clean;
+      });
+    return { daily };
+  }
+
 
   function normalizeState(candidate) {
-    const shouldGrantStarterItem = Boolean(candidate && candidate.version !== STATE_VERSION);
+    const sourceVersion = Number(candidate?.version);
+    const shouldGrantStarterItem = Number.isFinite(sourceVersion) && sourceVersion >= 2 && sourceVersion < 9;
     if (candidate?.version === 2) candidate = migrateV2State(candidate);
     if (candidate?.version === 3) candidate = migrateV3State(candidate);
     if (candidate?.version === 4) candidate = migrateV4State(candidate);
@@ -933,6 +995,7 @@
     if (candidate?.version === 6) candidate = migrateV6State(candidate);
     if (candidate?.version === 7) candidate = migrateV7State(candidate);
     if (candidate?.version === 8) candidate = migrateV8State(candidate);
+    if (candidate?.version === 9) candidate = migrateV9State(candidate);
     if (!candidate || candidate.version !== STATE_VERSION) return freshState();
 
     const next = freshState();
@@ -986,6 +1049,13 @@
       0,
       2,
       DEFAULT_RESISTANCE_BUILDUP
+    );
+    next.settings.chillModeEnabled = candidate.settings?.chillModeEnabled === true;
+    next.settings.chillMultiplier = clampNumber(
+      candidate.settings?.chillMultiplier,
+      CHILL_MULTIPLIER_MIN,
+      CHILL_MULTIPLIER_MAX,
+      DEFAULT_CHILL_MULTIPLIER
     );
     const sourceActions = Array.isArray(candidate.settings?.actions)
       ? candidate.settings.actions
@@ -1082,6 +1152,7 @@
       ? String(candidate.progression.streakThrough)
       : '';
 
+    next.metrics = normalizeMetrics(candidate.metrics);
     next.history = Array.isArray(candidate.history)
       ? candidate.history.slice(0, HISTORY_LIMIT).map(normalizeHistoryDay).filter(Boolean)
       : [];
@@ -1263,7 +1334,7 @@
       const raw = localStorage.getItem(storageKey);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      if (!parsed || ![2, 3, 4, 5, 6, 7, 8, STATE_VERSION].includes(parsed.version)) return null;
+      if (!parsed || ![2, 3, 4, 5, 6, 7, 8, 9, STATE_VERSION].includes(parsed.version)) return null;
       return normalizeState(parsed);
     } catch (error) {
       console.warn('Could not read cached MoLife data:', error);
@@ -1419,13 +1490,17 @@
       ? (summary.categoryActionCount[categoryId] || 0)
       : Math.max(0, clampInt(priorActionCount, 0, 100000, 0));
     const efficiency = getCategoryEfficiency(categoryId, actionCount, settings);
-    const raw = baseDamage * efficiency.multiplier;
+    const chillMultiplier = settings.chillModeEnabled === true
+      ? clampNumber(settings.chillMultiplier, CHILL_MULTIPLIER_MIN, CHILL_MULTIPLIER_MAX, DEFAULT_CHILL_MULTIPLIER)
+      : 1;
+    const raw = baseDamage * efficiency.multiplier * chillMultiplier;
     return {
       baseDamage,
       damage: Math.max(1, Math.round(raw)),
       efficiency: efficiency.multiplier,
       focus: efficiency.focus,
       resistance: efficiency.resistance,
+      chillMultiplier,
       raw
     };
   }
@@ -1709,6 +1784,86 @@
         encoded = JSON.stringify(state);
       }
     }
+  }
+
+
+  function getDailyMetric(date, metric) {
+    const value = state.metrics?.daily?.[date]?.[metric];
+    return Number.isFinite(Number(value)) ? Number(value) : null;
+  }
+
+  function moodLabel(value) {
+    const mood = clampNumber(value, MOOD_MIN, MOOD_MAX, 0);
+    if (mood <= -60) return 'VERY LOW';
+    if (mood <= -20) return 'LOW';
+    if (mood < 20) return 'BALANCED';
+    if (mood < 60) return 'ELEVATED';
+    return 'VERY HIGH';
+  }
+
+  function normalizeMoodValue(value) {
+    const clamped = clampNumber(value, MOOD_MIN, MOOD_MAX, 0);
+    return Math.round(clamped / MOOD_STEP) * MOOD_STEP;
+  }
+
+  function setDailyMetric(date, metric, value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date))) return false;
+    if (!/^[a-z][a-z0-9_-]{0,31}$/.test(String(metric))) return false;
+    if (!state.metrics || typeof state.metrics !== 'object') state.metrics = { daily: {} };
+    if (!state.metrics.daily || typeof state.metrics.daily !== 'object') state.metrics.daily = {};
+    if (!state.metrics.daily[date]) state.metrics.daily[date] = {};
+
+    state.metrics.daily[date][metric] = metric === 'mood'
+      ? normalizeMoodValue(value)
+      : clampNumber(value, -1000000000, 1000000000, 0);
+
+    const dates = Object.keys(state.metrics.daily).sort((a, b) => b.localeCompare(a));
+    dates.slice(DAILY_METRIC_LIMIT).forEach(oldDate => delete state.metrics.daily[oldDate]);
+
+    let encoded = JSON.stringify(state);
+    const oldestFirst = Object.keys(state.metrics.daily).sort((a, b) => a.localeCompare(b));
+    while (encoded.length > 225000 && oldestFirst.length > 365) {
+      delete state.metrics.daily[oldestFirst.shift()];
+      encoded = JSON.stringify(state);
+    }
+    return true;
+  }
+
+  function renderMoodTracker() {
+    if (!els.moodSlider || !state.current.date) return;
+    const recordedMood = getDailyMetric(state.current.date, 'mood');
+    const recorded = recordedMood !== null;
+    const value = recorded ? normalizeMoodValue(recordedMood) : 0;
+    const label = moodLabel(value);
+
+    els.moodSlider.value = String(value);
+    els.moodSlider.setAttribute('aria-valuetext', recorded
+      ? label
+      : 'Balanced position, not recorded today');
+    els.moodValue.textContent = recorded ? label : 'NOT LOGGED';
+    els.moodValue.dataset.level = recorded ? label.toLowerCase().replace(/\s+/g, '-') : 'unlogged';
+    els.moodStatus.textContent = recorded
+      ? 'TODAY\'S MOOD RECORDED · MOVE AGAIN TO UPDATE'
+      : 'MOVE THE SLIDER TO LOG TODAY';
+    els.moodPanel?.classList.toggle('has-reading', recorded);
+  }
+
+  function recordMood(value, { persist = false } = {}) {
+    ensureToday();
+    if (!setDailyMetric(state.current.date, 'mood', value)) return;
+    renderMoodTracker();
+
+    window.clearTimeout(moodSaveTimer);
+    if (persist) {
+      moodSaveTimer = null;
+      saveState();
+      return;
+    }
+
+    moodSaveTimer = window.setTimeout(() => {
+      moodSaveTimer = null;
+      saveState();
+    }, 180);
   }
 
 
@@ -2448,6 +2603,7 @@
     const summary = getSummary();
 
     renderHero(summary);
+    renderMoodTracker();
     renderProgression();
     renderPawnshop(summary, options.lootClaimed?.id || '');
     renderCategories(summary);
@@ -2659,6 +2815,16 @@
     if (els.tenaciousBadge) {
       els.tenaciousBadge.hidden = !summary.isTenacious;
       els.tenaciousBadge.textContent = 'TENACIOUS';
+    }
+    if (els.chillBadge) {
+      const chillMultiplier = clampNumber(
+        state.settings.chillMultiplier,
+        CHILL_MULTIPLIER_MIN,
+        CHILL_MULTIPLIER_MAX,
+        DEFAULT_CHILL_MULTIPLIER
+      );
+      els.chillBadge.hidden = state.settings.chillModeEnabled !== true;
+      els.chillBadge.textContent = `CHILL MODE ×${Number(chillMultiplier.toFixed(2)).toString()}`;
     }
     if (els.tenaciousStatus) {
       els.tenaciousStatus.hidden = !summary.isTenacious;
@@ -3046,7 +3212,12 @@
               : action.type === 'once'
                 ? 'Daily'
                 : 'Repeatable';
-            small.textContent = payout === 100 ? `${typeText} · full base damage` : `${typeText} · ${payout}% of base damage`;
+            const chillText = reward.chillMultiplier > 1
+              ? ` · CHILL ×${Number(reward.chillMultiplier.toFixed(2)).toString()}`
+              : '';
+            small.textContent = payout === 100
+              ? `${typeText} · full base damage${chillText}`
+              : `${typeText} · ${payout}% of base damage${chillText}`;
           }
 
           nameWrap.append(strong);
@@ -3079,7 +3250,9 @@
           badge.className = 'one-off-badge';
           badge.textContent = 'ONE-OFF';
           const small = document.createElement('small');
-          small.textContent = 'Disappears when done';
+          small.textContent = reward.chillMultiplier > 1
+            ? `Disappears when done · CHILL ×${Number(reward.chillMultiplier.toFixed(2)).toString()}`
+            : 'Disappears when done';
           nameWrap.append(strong, badge, small);
 
           const damage = document.createElement('span');
@@ -3363,6 +3536,14 @@
   }
 
 
+  function syncChillSettingsControls() {
+    if (!els.chillModeInput || !els.chillMultiplierInput) return;
+    const enabled = els.chillModeInput.checked;
+    els.chillMultiplierInput.disabled = !enabled;
+    els.chillMultiplierRow?.classList.toggle('is-disabled', !enabled);
+  }
+
+
   function openSettings() {
     settingsDraft = deepClone(state.settings);
     settingsDraft.categories = ensureUncategorizedCategory(settingsDraft.categories);
@@ -3370,6 +3551,14 @@
     els.goalInput.value = settingsDraft.fullEnemyHp;
     els.focusFactorInput.value = clampNumber(settingsDraft.focusFactor, 1, 10, DEFAULT_FOCUS_FACTOR);
     els.resistanceBuildupInput.value = clampNumber(settingsDraft.resistanceBuildup, 0, 2, DEFAULT_RESISTANCE_BUILDUP);
+    els.chillModeInput.checked = settingsDraft.chillModeEnabled === true;
+    els.chillMultiplierInput.value = clampNumber(
+      settingsDraft.chillMultiplier,
+      CHILL_MULTIPLIER_MIN,
+      CHILL_MULTIPLIER_MAX,
+      DEFAULT_CHILL_MULTIPLIER
+    );
+    syncChillSettingsControls();
     els.settingsMessage.textContent = 'Changes save automatically. Enemy HP and Required-for-victory changes apply to the next daily fight.';
     if (els.newCategoryColor) {
       const customCount = settingsDraft.categories.filter(
@@ -4263,6 +4452,13 @@
           2,
           settingsDraft.resistanceBuildup ?? DEFAULT_RESISTANCE_BUILDUP
         ).toFixed(2)),
+        chillModeEnabled: els.chillModeInput.checked,
+        chillMultiplier: Number(clampNumber(
+          els.chillMultiplierInput.value,
+          CHILL_MULTIPLIER_MIN,
+          CHILL_MULTIPLIER_MAX,
+          settingsDraft.chillMultiplier ?? DEFAULT_CHILL_MULTIPLIER
+        ).toFixed(2)),
         categories,
         actions,
         combos
@@ -4398,7 +4594,7 @@
       const importedName = typeof payload.name === 'string' ? payload.name.slice(0, 60) : '';
 
       const confirmed = window.confirm(
-        'Switch to this MoLife settings template?\n\nThis replaces difficulty, focused-category tuning, resistance buildup, categories/colors, reusable actions, ordering, Required-for-victory flags and combos. Your One-offs, fight history, Level, Street Cred, streak, today’s recorded damage and Pawnshop items stay untouched.'
+        'Switch to this MoLife settings template?\n\nThis replaces difficulty, focused-category tuning, resistance buildup, Chill Mode, categories/colors, reusable actions, ordering, Required-for-victory flags and combos. Your One-offs, fight history, mood history, Level, Street Cred, streak, today’s recorded damage and Pawnshop items stay untouched.'
       );
       if (!confirmed) return;
 
@@ -4419,6 +4615,9 @@
       els.goalInput.value = settingsDraft.fullEnemyHp;
       els.focusFactorInput.value = settingsDraft.focusFactor;
       els.resistanceBuildupInput.value = settingsDraft.resistanceBuildup;
+      els.chillModeInput.checked = settingsDraft.chillModeEnabled === true;
+      els.chillMultiplierInput.value = settingsDraft.chillMultiplier;
+      syncChillSettingsControls();
       if (els.templateName) els.templateName.value = importedName;
       updateGoalPreview();
       renderCategoriesEditor();
@@ -4464,7 +4663,7 @@
 
   function resetGameData() {
     const confirmed = window.confirm(
-      'Reset ALL MoLife game data?\n\nThis wipes categories, actions, One-offs, combos, Pawnshop items, history, Level, Street Cred and streaks. Your login/account remains.\n\nThe Crestfallen Department of Records will pretend none of this ever happened.'
+      'Reset ALL MoLife game data?\n\nThis wipes categories, actions, One-offs, combos, Pawnshop items, mood history, fight history, Level, Street Cred and streaks. Your login/account remains.\n\nThe Crestfallen Department of Records will pretend none of this ever happened.'
     );
     if (!confirmed) return;
 
@@ -4498,6 +4697,9 @@
     guestStorageKey: STORAGE_KEY
   });
 
+  els.moodSlider?.addEventListener('input', () => recordMood(els.moodSlider.value));
+  els.moodSlider?.addEventListener('change', () => recordMood(els.moodSlider.value, { persist: true }));
+
   els.settingsButton.addEventListener('click', openSettings);
   els.closeSettingsButton?.addEventListener('click', closeSettings);
 
@@ -4512,10 +4714,13 @@
     const editsExistingSetting = target === els.goalInput
       || target === els.focusFactorInput
       || target === els.resistanceBuildupInput
+      || target === els.chillModeInput
+      || target === els.chillMultiplierInput
       || target.closest?.('.category-direct-editor, .action-direct-editor, .combo-direct-editor');
 
+    if (target === els.chillModeInput) syncChillSettingsControls();
     if (editsExistingSetting) {
-      scheduleSettingsSave(target.type === 'color' ? 0 : 260);
+      scheduleSettingsSave(target.type === 'color' || target === els.chillModeInput ? 0 : 260);
     }
   });
 
@@ -4525,6 +4730,8 @@
     if (target === els.goalInput
       || target === els.focusFactorInput
       || target === els.resistanceBuildupInput
+      || target === els.chillModeInput
+      || target === els.chillMultiplierInput
       || target.closest?.('.category-direct-editor, .action-direct-editor, .combo-direct-editor')) {
       scheduleSettingsSave(0);
     }
