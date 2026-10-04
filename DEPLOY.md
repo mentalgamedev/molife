@@ -224,7 +224,7 @@ Repository → Settings → Secrets and variables → Actions
 
 The workflow:
 
-- runs JavaScript and PHP syntax checks
+- runs JavaScript/PHP syntax checks plus the frontend smoke test
 - prepares a clean public deployment directory
 - excludes repository documentation, schema/config examples and secret-file patterns
 - deploys with explicit TLS (FTPS)
