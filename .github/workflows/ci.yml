@@ -17,6 +17,7 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check app.js
+          node --check metrics-viewer.js
           node --check cloud.js
           node --check service-worker.js
 
