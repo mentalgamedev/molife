@@ -246,7 +246,8 @@
 .metrics-chart {
   display: block;
   width: 100%;
-  height: 330px;
+  height: auto;
+  min-height: 260px;
   overflow: visible;
 }
 
@@ -414,7 +415,7 @@
   }
 
   .metrics-chart {
-    height: 300px;
+    min-height: 230px;
   }
 
   .mood-actions {
