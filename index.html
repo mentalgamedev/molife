@@ -9,9 +9,10 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="preload" href="fonts/PunkKid.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=4.19.0">
-  <link rel="stylesheet" href="pawnshop.css?v=4.19.0">
-  <link rel="stylesheet" href="mood.css?v=4.19.0">
+  <link rel="stylesheet" href="styles.css?v=4.20.0">
+  <link rel="stylesheet" href="pawnshop.css?v=4.20.0">
+  <link rel="stylesheet" href="mood.css?v=4.20.0">
+  <link rel="stylesheet" href="metrics.css?v=4.20.0">
 </head>
 <body>
   <div class="city-noise" aria-hidden="true"></div>
@@ -30,7 +31,7 @@
       <div class="brand-block">
         <h1 class="brand-title" aria-label="MoLife"><span class="brand-mo">Mo</span><span class="brand-life">Life</span><span class="brand-tm">™</span></h1>
         <div class="brand-subline"><strong>Daily Struggle Assistant</strong><span> · powered by MoThink-6.7</span></div>
-        <div class="app-version" aria-label="MoLife version 4.19.0">v4.19.0 · Bureau of Emotional Weather</div>
+        <div class="app-version" aria-label="MoLife version 4.20.0">v4.20.0 · Joint Committee on Higher Metrics</div>
         <div id="todayLabel" class="muted"></div>
       </div>
       <button id="settingsButton" class="icon-button" type="button" aria-label="Open settings" title="Settings">⚙</button>
@@ -97,7 +98,10 @@
         </label>
 
         <div id="moodStatus" class="mood-status" role="status" aria-live="polite">MOVE THE SLIDER TO LOG TODAY</div>
-        <p class="mood-note">Untouched days are not recorded. Move the slider again any time today to update the reading.</p>
+        <div class="mood-actions">
+          <p class="mood-note">Untouched days are not recorded. Move the slider again any time today to update the reading.</p>
+          <button class="mood-trends-button" type="button" data-open-metric="mood">View trend</button>
+        </div>
       </section>
 
       <section id="victoryBanner" class="victory-banner" hidden>
@@ -197,6 +201,7 @@
               <div class="eyebrow">FIGHT ARCHIVES</div>
               <h2>Recent days</h2>
             </div>
+            <button class="metrics-open-button" type="button" data-open-metric="mood">Data terminal</button>
           </div>
           <div id="historyList" class="history-list"></div>
         </div>
@@ -215,6 +220,86 @@
       </div>
     </footer>
   </div>
+
+  <dialog id="metricsDialog" class="metrics-dialog" aria-labelledby="metricsDialogTitle">
+    <section class="metrics-terminal">
+      <header class="metrics-head">
+        <div>
+          <div class="eyebrow">JOINT COMMITTEE ON HIGHER METRICS // AUTHORIZED PERSONNEL ONLY</div>
+          <h2 id="metricsDialogTitle">Data Terminal</h2>
+        </div>
+        <button id="closeMetricsButton" class="icon-button metrics-close" type="button" aria-label="Close data terminal">×</button>
+      </header>
+
+      <div class="metrics-controls">
+        <label class="metrics-control">
+          <span>Metric</span>
+          <select id="metricsMetricSelect">
+            <option value="mood">Mood</option>
+          </select>
+        </label>
+
+        <div class="metrics-range-control">
+          <span class="metrics-range-label">Range</span>
+          <div class="metrics-range-buttons" role="group" aria-label="Graph date range">
+            <button type="button" data-metrics-range="week" class="is-active" aria-pressed="true">Week</button>
+            <button type="button" data-metrics-range="month" aria-pressed="false">Month</button>
+            <button type="button" data-metrics-range="year" aria-pressed="false">Year</button>
+            <button type="button" data-metrics-range="custom" aria-pressed="false">Custom</button>
+          </div>
+        </div>
+
+        <label class="metrics-trend-toggle">
+          <input id="metricsTrendToggle" type="checkbox">
+          <span>7-day trend</span>
+        </label>
+      </div>
+
+      <div id="metricsCustomRange" class="metrics-custom-range" hidden>
+        <label class="metrics-control">
+          <span>From</span>
+          <input id="metricsCustomStart" type="date">
+        </label>
+        <label class="metrics-control">
+          <span>To</span>
+          <input id="metricsCustomEnd" type="date">
+        </label>
+      </div>
+
+      <div class="metrics-summary" aria-label="Metric summary">
+        <div class="metrics-summary-card">
+          <span>Recorded</span>
+          <strong id="metricsRecordedValue">0 / 7</strong>
+        </div>
+        <div class="metrics-summary-card">
+          <span>Average</span>
+          <strong id="metricsAverageValue">—</strong>
+        </div>
+        <div class="metrics-summary-card">
+          <span>Lowest</span>
+          <strong id="metricsLowValue">—</strong>
+        </div>
+        <div class="metrics-summary-card">
+          <span>Highest</span>
+          <strong id="metricsHighValue">—</strong>
+        </div>
+      </div>
+
+      <div class="metrics-chart-shell">
+        <svg id="metricsChart" class="metrics-chart" role="img" aria-label="Mood history chart"></svg>
+        <div id="metricsChartEmpty" class="metrics-chart-empty">No readings in this range. The Committee declines to fabricate emotional evidence.</div>
+      </div>
+
+      <div class="metrics-legend" aria-hidden="true">
+        <span><i></i> Daily reading</span>
+        <span class="is-trend"><i></i> 7-day trend</span>
+        <span class="is-baseline"><i></i> Balanced baseline</span>
+      </div>
+      <p id="metricsChartCaption" class="metrics-chart-caption"></p>
+      <p id="metricsRangeNote" class="metrics-range-note">Missing days remain gaps. Balanced is the zero baseline, not a substitute for missing data.</p>
+      <p class="metrics-disclaimer">Mood is a self-reported daily signal, not a diagnosis. NOTICE 04:20: the Joint Committee confirms these statistics may be slightly elevated.</p>
+    </section>
+  </dialog>
 
   <dialog id="dayCardDialog" class="day-card-dialog">
     <article class="day-card">
@@ -571,7 +656,8 @@
     </article>
   </template>
 
-  <script src="app.js?v=4.19.0" defer></script>
-  <script src="cloud.js?v=4.19.0" defer></script>
+  <script src="app.js?v=4.20.0" defer></script>
+  <script src="metrics-viewer.js?v=4.20.0" defer></script>
+  <script src="cloud.js?v=4.20.0" defer></script>
 </body>
 </html>
