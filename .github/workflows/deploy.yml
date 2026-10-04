@@ -47,6 +47,9 @@ jobs:
           test ! -e dalli-config.php
           test ! -e .env
 
+      - name: Run frontend smoke checks
+        run: node tests/frontend-smoke.mjs
+
       - name: Install auth-test dependencies
         run: |
           sudo apt-get update -qq
