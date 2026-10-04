@@ -18,7 +18,8 @@ const cssFiles = [
   'pawnshop.css',
   'mood.css',
   'metrics.css',
-  'settings.css'
+  'settings.css',
+  'info.css'
 ];
 
 const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
@@ -127,6 +128,37 @@ const retiredSelectors = [
   '.inventory-detail',
   '.weight-row'
 ];
+const expectedDefaultDamage = new Map([
+  ['wellbeing-workout-30', 30],
+  ['wellbeing-walk-20', 15],
+  ['wellbeing-mobility-10', 10],
+  ['wellbeing-good-meal', 15],
+  ['work-focus-25', 25],
+  ['work-focus-50', 45],
+  ['work-practice-20', 15],
+  ['work-admin', 15],
+  ['chores-small', 10],
+  ['chores-medium', 20],
+  ['chores-laundry', 15],
+  ['chores-big', 30]
+]);
+
+const defaultActionDamage = new Map();
+for (const match of app.matchAll(/\{ id: '([^']+)', categoryId: '[^']+', name: '[^']+', baseDamage: (\d+), type:/g)) {
+  defaultActionDamage.set(match[1], Number(match[2]));
+}
+for (const [id, expected] of expectedDefaultDamage) {
+  if (defaultActionDamage.get(id) !== expected) {
+    fail(`Unexpected predefined damage for ${id}: expected ${expected}, got ${defaultActionDamage.get(id)}`);
+  }
+}
+
+if (!app.includes('const STATE_VERSION = 11;')
+    || !app.includes('onboarding: {')
+    || !app.includes('infoSeen: false')) {
+  fail('v11 first-run onboarding defaults are missing');
+}
+
 const mainCss = read('styles.css');
 const returnedLegacy = retiredSelectors.filter(selector => mainCss.includes(selector));
 if (returnedLegacy.length) {
