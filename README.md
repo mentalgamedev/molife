@@ -406,6 +406,18 @@ Existing predefined Actions receive the new value only when their stored damage 
 
 State schema is now **v11**, adding only `onboarding.infoSeen`. Cloud validation and integration coverage were extended accordingly.
 
+## v4.23.1 — Template Compliance Unit
+
+Settings templates now use **template format v2** and record the originating MoLife state version. Legacy v1 templates remain importable.
+
+Legacy templates created before the v4.23 starter rebalance receive the same exact-value damage migration as old state saves: a predefined Action is upgraded only when its imported damage still exactly matches the old stock value. Hand-tuned/custom values remain untouched.
+
+Template copy now explicitly lists the settings that travel with a template: enemy HP, Focus/Resistance/Chill tuning, categories/colors, Action type/damage/order/visibility/Required counts, and combo multipliers/sequences. One-offs, progression, fight/mood history, current-fight data, Pawnshop inventory and onboarding state remain user data and are not portable challenge settings.
+
+The frontend smoke gate now checks template-format metadata, legacy v1 support, exact-value damage migration and coverage of every current challenge-setting field.
+
+State schema remains **v11**; this patch changes only the portable template format.
+
 ## Self-hosting
 
 See [DEPLOY.md](DEPLOY.md) for the provider-neutral self-hosting guide.
