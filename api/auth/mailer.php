@@ -8,6 +8,13 @@ function dalli_mail_value(string $key): string
     return trim(dalli_config('mail', $key));
 }
 
+function dalli_registration_admin_notify_email(): string
+{
+    $email = trim(dalli_config('app', 'registration_admin_notify_email'));
+    if ($email === '') return '';
+    return filter_var($email, FILTER_VALIDATE_EMAIL) !== false ? $email : '';
+}
+
 function dalli_mail_sender_domain(): string
 {
     $from = dalli_mail_value('from_email');
@@ -406,6 +413,78 @@ function dalli_send_verification_email(string $email, string $username, string $
         $message['plain'],
         $message['html']
     );
+}
+
+function dalli_verified_public_user_count(PDO $pdo): int
+{
+    $stmt = $pdo->query(
+        "SELECT COUNT(*) FROM users
+         WHERE status = 'active'
+           AND email IS NOT NULL
+           AND email_verified_at IS NOT NULL"
+    );
+    return (int) $stmt->fetchColumn();
+}
+
+function dalli_build_registration_admin_email(
+    string $username,
+    string $email,
+    int $confirmedUsers,
+    string $activatedAt
+): array {
+    $safeUsername = htmlspecialchars($username, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $safeEmail = htmlspecialchars($email, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $safeActivatedAt = htmlspecialchars($activatedAt, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+    $subject = 'New citizen processed by MoLife™';
+    $plain = "MoLife // Bureau of New Citizens\n\n"
+        . "A new citizen has completed MoLife registration.\n\n"
+        . "Username: {$username}\n"
+        . "Email: {$email}\n"
+        . "Activated: {$activatedAt}\n"
+        . "Confirmed users: {$confirmedUsers}\n";
+
+    $html = '<!doctype html><html><body style="margin:0;background:#0d1016;color:#f3f4f7;font-family:Arial,sans-serif;">'
+        . '<div style="max-width:560px;margin:0 auto;padding:32px 24px;">'
+        . '<div style="font-size:11px;letter-spacing:.18em;color:#8b94a4;text-transform:uppercase;">mo.les.tech // bureau of new citizens</div>'
+        . '<h1 style="margin:10px 0 8px;font-size:30px;">NEW CITIZEN PROCESSED</h1>'
+        . '<p style="color:#b8bfca;line-height:1.55;">A new citizen has completed MoLife registration.</p>'
+        . '<div style="margin:20px 0;padding:16px;border:1px solid #303744;border-radius:8px;background:#111620;">'
+        . '<div style="margin:0 0 8px;"><strong>Username:</strong> ' . $safeUsername . '</div>'
+        . '<div style="margin:0 0 8px;"><strong>Email:</strong> ' . $safeEmail . '</div>'
+        . '<div style="margin:0 0 8px;"><strong>Activated:</strong> ' . $safeActivatedAt . '</div>'
+        . '<div><strong>Confirmed users:</strong> ' . $confirmedUsers . '</div>'
+        . '</div>'
+        . '<p style="margin-top:28px;color:#68717f;font-size:11px;">powered by MoThink-6.7</p>'
+        . '</div></body></html>';
+
+    return ['subject' => $subject, 'plain' => $plain, 'html' => $html];
+}
+
+function dalli_send_registration_admin_notification(PDO $pdo, string $username, string $email): bool
+{
+    $recipient = dalli_registration_admin_notify_email();
+    if ($recipient === '') {
+        return false;
+    }
+
+    $confirmedUsers = dalli_verified_public_user_count($pdo);
+    $activatedAt = gmdate('Y-m-d H:i:s') . ' UTC';
+    $message = dalli_build_registration_admin_email(
+        $username,
+        $email,
+        $confirmedUsers,
+        $activatedAt
+    );
+
+    dalli_send_transactional_email(
+        $recipient,
+        'MoLife operator',
+        $message['subject'],
+        $message['plain'],
+        $message['html']
+    );
+    return true;
 }
 
 if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
