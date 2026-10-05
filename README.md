@@ -418,6 +418,22 @@ The frontend smoke gate now checks template-format metadata, legacy v1 support, 
 
 State schema remains **v11**; this patch changes only the portable template format.
 
+## v4.23.2 — Bureau of New Citizens
+
+MoLife can now send the operator a compact notification after a public account successfully completes email verification. The notification is triggered only after the account commits its `pending → active` transition; registration-form submissions, abandoned pending accounts, wrong-password verification attempts and reused verification tokens do not notify the operator.
+
+Configure the recipient inside the private `app` config section:
+
+```php
+'registration_admin_notify_email' => 'molife@example.com',
+```
+
+Leave the value empty or omit it to disable notifications. The message contains only the username, verified email address, activation time in UTC, and the current count of verified public users. It does not include passwords, verification tokens, IP addresses, user agents, gameplay state or Mood data.
+
+Admin-mail delivery is deliberately non-fatal. Activation is committed first; if the operator message cannot be delivered, MoLife logs the mail failure while returning successful activation to the user.
+
+State schema remains **v11** and no database migration is required.
+
 ## Self-hosting
 
 See [DEPLOY.md](DEPLOY.md) for the provider-neutral self-hosting guide.
