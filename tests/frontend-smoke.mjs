@@ -187,6 +187,40 @@ if (!app.includes('const STATE_VERSION = 11;')
   fail('v11 first-run onboarding defaults are missing');
 }
 
+if (!app.includes('const LEGACY_TEMPLATE_VERSION = 1;')
+    || !app.includes('const TEMPLATE_VERSION = 2;')
+    || !app.includes('stateVersion: STATE_VERSION')) {
+  fail('Settings-template v2 metadata is incomplete');
+}
+if (!app.includes('[LEGACY_TEMPLATE_VERSION, TEMPLATE_VERSION].includes(payload.version)')
+    || !app.includes('sourceStateVersion < 11')
+    || !app.includes('Number(action?.baseDamage) === damageMigration[0]')) {
+  fail('Legacy template migration support is incomplete');
+}
+
+const expectedTemplateSettings = [
+  'fullEnemyHp',
+  'focusCategoryId',
+  'focusFactor',
+  'resistanceBuildup',
+  'chillModeEnabled',
+  'chillMultiplier',
+  'categories',
+  'actions',
+  'combos'
+];
+const buildSettingsStart = app.indexOf('function buildSettingsFromDraft()');
+const buildSettingsEnd = app.indexOf('function commitSettingsDraft', buildSettingsStart);
+const buildSettingsSource = app.slice(buildSettingsStart, buildSettingsEnd);
+const missingTemplateSettings = expectedTemplateSettings.filter(key => !buildSettingsSource.includes(key));
+if (missingTemplateSettings.length) {
+  fail(`Template-backed settings missing from settings builder: ${missingTemplateSettings.join(', ')}`);
+}
+if (!html.includes('Actions (type, damage, order, visibility and Required counts)')
+    || !html.includes('onboarding state')) {
+  fail('Settings-template scope copy is out of date');
+}
+
 const mainCss = read('styles.css');
 const returnedLegacy = retiredSelectors.filter(selector => mainCss.includes(selector));
 if (returnedLegacy.length) {
