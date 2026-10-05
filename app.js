@@ -2,7 +2,8 @@
   'use strict';
 
   const STATE_VERSION = 11;
-  const TEMPLATE_VERSION = 1;
+  const LEGACY_TEMPLATE_VERSION = 1;
+  const TEMPLATE_VERSION = 2;
   const ITEM_DROP_CHANCE = 0.40;
   const ITEM_CAPACITY = 8;
   const STORAGE_KEY = 'dailyXpGame.v2';
@@ -4570,6 +4571,7 @@
     return {
       kind: 'molife-settings-template',
       version: TEMPLATE_VERSION,
+      stateVersion: STATE_VERSION,
       name: String(name || '').trim().slice(0, 60),
       exportedAt: new Date().toISOString(),
       settings: deepClone(settings)
@@ -4586,10 +4588,40 @@
       .slice(0, 48);
   }
 
+  function templateSourceStateVersion(payload) {
+    if (payload.version === LEGACY_TEMPLATE_VERSION) return 10;
+
+    const sourceVersion = Number(payload.stateVersion);
+    if (!Number.isInteger(sourceVersion) || sourceVersion < 2) {
+      throw new Error('Template is missing its MoLife state version.');
+    }
+    if (sourceVersion > STATE_VERSION) {
+      throw new Error('This template was created by a newer version of MoLife.');
+    }
+    return sourceVersion;
+  }
+
+  function migrateImportedTemplateSettings(raw, sourceStateVersion) {
+    const settings = deepClone(raw);
+
+    if (sourceStateVersion < 11 && Array.isArray(settings.actions)) {
+      settings.actions = settings.actions.map(action => {
+        const next = { ...action };
+        const damageMigration = DEFAULT_ACTION_DAMAGE_MIGRATIONS[String(action?.id || '')];
+        if (damageMigration && Number(action?.baseDamage) === damageMigration[0]) {
+          next.baseDamage = damageMigration[1];
+        }
+        return next;
+      });
+    }
+
+    return settings;
+  }
+
   function normalizeImportedTemplate(payload) {
     if (!payload || typeof payload !== 'object'
       || payload.kind !== 'molife-settings-template'
-      || payload.version !== TEMPLATE_VERSION
+      || ![LEGACY_TEMPLATE_VERSION, TEMPLATE_VERSION].includes(payload.version)
       || !payload.settings || typeof payload.settings !== 'object') {
       throw new Error('This is not a compatible MoLife settings template.');
     }
@@ -4599,8 +4631,9 @@
       throw new Error('Template is missing categories, actions or combos.');
     }
 
+    const sourceStateVersion = templateSourceStateVersion(payload);
     const candidate = freshState();
-    candidate.settings = deepClone(raw);
+    candidate.settings = migrateImportedTemplateSettings(raw, sourceStateVersion);
     return normalizeState(candidate).settings;
   }
 
@@ -4630,7 +4663,7 @@
     window.setTimeout(() => URL.revokeObjectURL(href), 1000);
 
     if (els.templateStatus) {
-      els.templateStatus.textContent = 'Template exported. One-offs, progress, history and Phat Ed’s Pawnshop inventory were intentionally excluded.';
+      els.templateStatus.textContent = 'Template exported. One-offs, progression, fight/mood history, current-fight data, Pawnshop inventory and onboarding state were intentionally excluded.';
     }
   }
 
@@ -4641,9 +4674,10 @@
       const payload = JSON.parse(await file.text());
       const importedSettings = normalizeImportedTemplate(payload);
       const importedName = typeof payload.name === 'string' ? payload.name.slice(0, 60) : '';
+      const legacyTemplate = payload.version === LEGACY_TEMPLATE_VERSION;
 
       const confirmed = window.confirm(
-        'Switch to this MoLife settings template?\n\nThis replaces difficulty, focused-category tuning, resistance buildup, Chill Mode, categories/colors, reusable actions, ordering, Required-for-victory flags and combos. Your One-offs, fight history, mood history, Level, Street Cred, streak, today’s recorded damage and Pawnshop items stay untouched.'
+        'Switch to this MoLife settings template?\n\nThis replaces enemy HP, Focus/Resistance/Chill tuning, categories/colors, Actions (type, damage, visibility, Required counts and order), and combos (multipliers and sequences). Your One-offs, progression, fight/mood history, current fight, Pawnshop items and onboarding state stay untouched.'
       );
       if (!confirmed) return;
 
@@ -4677,7 +4711,7 @@
 
       els.settingsMessage.textContent = 'Template imported and activated.';
       if (els.templateStatus) {
-        els.templateStatus.textContent = `${importedName ? importedName + ' · ' : ''}${settingsDraft.categories.length - 1} categories · ${settingsDraft.actions.length} actions · ${settingsDraft.combos.length} combos`;
+        els.templateStatus.textContent = `${legacyTemplate ? 'Legacy template upgraded · ' : ''}${importedName ? importedName + ' · ' : ''}${settingsDraft.categories.length - 1} categories · ${settingsDraft.actions.length} actions · ${settingsDraft.combos.length} combos`;
       }
     } catch (error) {
       console.warn('Could not import MoLife template:', error);
