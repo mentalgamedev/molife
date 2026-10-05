@@ -32,6 +32,12 @@ return [
         'registration_mode' => 'invite',
 
         /*
+         * Optional operator email for successful verified public registrations.
+         * Empty or omitted disables admin signup notifications.
+         */
+        'registration_admin_notify_email' => '',
+
+        /*
          * Private HMAC key used to pseudonymize rate-limit buckets such as IPs
          * and account identifiers. Generate at least 32 random bytes.
          */

@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/auth/bootstrap.php';
+require __DIR__ . '/auth/mailer.php';
 
 dalli_require_method('POST');
 dalli_require_same_origin();
@@ -61,6 +62,11 @@ try {
          WHERE id = ? AND status = 'pending'"
     );
     $update->execute([$userId]);
+    if ($update->rowCount() !== 1) {
+        $pdo->rollBack();
+        dalli_verification_attempt_rate_failure();
+        dalli_fail('Activation link is invalid or expired.', 400);
+    }
 
     $pdo->prepare(
         "DELETE FROM auth_tokens WHERE user_id = ? AND purpose = 'email_verify'"
@@ -73,6 +79,19 @@ try {
     }
     error_log('MoLife account activation failed: ' . $e->getMessage());
     dalli_fail('Could not activate account.', 500);
+}
+
+try {
+    $email = is_string($user['email'] ?? null) ? (string) $user['email'] : '';
+    if ($email !== '') {
+        dalli_send_registration_admin_notification(
+            $pdo,
+            (string) $user['username'],
+            $email
+        );
+    }
+} catch (Throwable $e) {
+    error_log('MoLife admin registration notification failed: ' . $e->getMessage());
 }
 
 $userPayload = dalli_start_user_session($pdo, $userId, (string) $user['username']);

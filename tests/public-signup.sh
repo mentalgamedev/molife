@@ -84,6 +84,9 @@ assert_json_true "$REGISTER_BODY" "pending"
 TOKEN_ONE="$(last_verification_token)"
 test -n "$TOKEN_ONE"
 
+MAIL_COUNT_AFTER_REGISTER="$(wc -l < "$MAIL_SINK" | tr -d ' ')"
+test "$MAIL_COUNT_AFTER_REGISTER" = "1"
+
 php -r '
   $path = $argv[1];
   $lines = @file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
@@ -97,6 +100,7 @@ php -r '
 WRONG_PASSWORD_RESULT="$(post_json verify-email.php "{\"token\":\"$TOKEN_ONE\",\"password\":\"definitely wrong password\"}")"
 WRONG_PASSWORD_CODE="$(printf '%s\n' "$WRONG_PASSWORD_RESULT" | tail -n1)"
 test "$WRONG_PASSWORD_CODE" = "401"
+test "$(wc -l < "$MAIL_SINK" | tr -d ' ')" = "$MAIL_COUNT_AFTER_REGISTER"
 
 VERIFY_RESULT="$(post_json verify-email.php "{\"token\":\"$TOKEN_ONE\",\"password\":\"correct horse battery staple\"}")"
 VERIFY_BODY="${VERIFY_RESULT%$'\n'*}"
@@ -105,12 +109,33 @@ test "$VERIFY_CODE" = "200"
 assert_json_true "$VERIFY_BODY" "authenticated"
 assert_json_true "$VERIFY_BODY" "activated"
 
+test "$(wc -l < "$MAIL_SINK" | tr -d ' ')" = "2"
+php -r '
+  $path = $argv[1];
+  $token = $argv[2];
+  $password = $argv[3];
+  $lines = @file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+  if (!$lines || count($lines) !== 2) exit(1);
+  $mail = json_decode($lines[count($lines)-1], true);
+  if (!is_array($mail)) exit(1);
+  if (($mail["to"] ?? "") !== "admin@example.test") exit(1);
+  if (($mail["subject"] ?? "") !== "New citizen processed by MoLife™") exit(1);
+  $plain = (string)($mail["plain"] ?? "");
+  $html = (string)($mail["html"] ?? "");
+  if (strpos($plain, "Username: publictest") === false) exit(1);
+  if (strpos($plain, "Email: publictest@example.com") === false) exit(1);
+  if (strpos($plain, "Confirmed users: 1") === false) exit(1);
+  if (strpos($plain, $token) !== false || strpos($html, $token) !== false) exit(1);
+  if (strpos($plain, $password) !== false || strpos($html, $password) !== false) exit(1);
+' "$MAIL_SINK" "$TOKEN_ONE" "correct horse battery staple"
+
 STATUS_ROW="$(mysql -N -h 127.0.0.1 -uroot -proot molife_test -e "SELECT CONCAT(status, '|', IF(email_verified_at IS NULL, '0', '1'), '|', email) FROM users WHERE username='publictest' LIMIT 1;")"
 test "$STATUS_ROW" = "active|1|publictest@example.com"
 
 REUSE_RESULT="$(post_json verify-email.php "{\"token\":\"$TOKEN_ONE\",\"password\":\"correct horse battery staple\"}")"
 REUSE_CODE="${REUSE_RESULT##*$'\n'}"
 test "$REUSE_CODE" = "400"
+test "$(wc -l < "$MAIL_SINK" | tr -d ' ')" = "2"
 
 BEFORE_COUNT="$(mysql -N -h 127.0.0.1 -uroot -proot molife_test -e "SELECT COUNT(*) FROM users;")"
 DUP_RESULT="$(post_json register.php '{"username":"differentname","email":"publictest@example.com","password":"another correct horse battery staple","confirmPassword":"another correct horse battery staple","remember":true,"website":""}')"
@@ -141,6 +166,23 @@ NEW_BODY="$(printf '%s\n' "$NEW_RESULT" | sed '$d')"
 NEW_CODE="$(printf '%s\n' "$NEW_RESULT" | tail -n1)"
 test "$NEW_CODE" = "200"
 assert_json_true "$NEW_BODY" "activated"
+
+FAIL_NOTIFY_REGISTER="$(post_json register.php '{"username":"notifyfail","email":"notifyfail@example.com","password":"notify failure correct horse battery staple","confirmPassword":"notify failure correct horse battery staple","remember":false,"website":""}')"
+FAIL_NOTIFY_REGISTER_CODE="${FAIL_NOTIFY_REGISTER##*$'\n'}"
+test "$FAIL_NOTIFY_REGISTER_CODE" = "202"
+FAIL_NOTIFY_TOKEN="$(last_verification_token)"
+test -n "$FAIL_NOTIFY_TOKEN"
+
+sed -i "s#'test_sink' => '/tmp/molife-mail-sink.jsonl'#'test_sink' => '/proc/molife-mail-sink.jsonl'#" ../molife-config.php
+FAIL_NOTIFY_VERIFY="$(post_json verify-email.php "{\"token\":\"$FAIL_NOTIFY_TOKEN\",\"password\":\"notify failure correct horse battery staple\"}")"
+sed -i "s#'test_sink' => '/proc/molife-mail-sink.jsonl'#'test_sink' => '/tmp/molife-mail-sink.jsonl'#" ../molife-config.php
+FAIL_NOTIFY_VERIFY_BODY="$(printf '%s\n' "$FAIL_NOTIFY_VERIFY" | sed '$d')"
+FAIL_NOTIFY_VERIFY_CODE="$(printf '%s\n' "$FAIL_NOTIFY_VERIFY" | tail -n1)"
+test "$FAIL_NOTIFY_VERIFY_CODE" = "200"
+assert_json_true "$FAIL_NOTIFY_VERIFY_BODY" "activated"
+FAIL_NOTIFY_STATUS="$(mysql -N -h 127.0.0.1 -uroot -proot molife_test -e "SELECT CONCAT(status, '|', IF(email_verified_at IS NULL, '0', '1')) FROM users WHERE username='notifyfail' LIMIT 1;")"
+test "$FAIL_NOTIFY_STATUS" = "active|1"
+grep -q "MoLife admin registration notification failed" "$SERVER_LOG"
 
 OWNER_COOKIES="/tmp/molife-owner-cookies.txt"
 rm -f "$OWNER_COOKIES"
