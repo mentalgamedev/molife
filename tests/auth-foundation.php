@@ -16,6 +16,7 @@ function test_assert(bool $condition, string $message): void
 
 test_assert(function_exists('dalli_validate_state'), 'MoLife state validator should load outside the shared bootstrap');
 test_assert(function_exists('dalli_send_transactional_email'), 'legacy mailer include should resolve through the auth module');
+test_assert(dalli_registration_admin_notify_email() === '', 'admin signup notifications should be disabled when no recipient is configured');
 
 $v7State = [
     'version' => 7,
@@ -135,6 +136,7 @@ test_assert(($validatedV11['settings']['chillMultiplier'] ?? null) === 2.0, 'v11
 test_assert(($validatedV11['metrics']['daily']['2026-01-01']['mood'] ?? null) === -35, 'v11 should preserve mood metrics');
 
 $pdo = dalli_pdo();
+test_assert(dalli_send_registration_admin_notification($pdo, 'nobody', 'nobody@example.test') === false, 'disabled admin notification should be a no-op even without mail transport');
 test_assert(dalli_auth_schema_ready($pdo), 'modern auth schema should be detected');
 test_assert(dalli_registration_mode() === 'invite', 'registration mode should default from test config');
 test_assert(dalli_auth_hmac_ready(), 'dedicated auth HMAC key should be strong enough for public auth');
