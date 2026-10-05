@@ -11,7 +11,7 @@ This directory is the reusable authentication boundary for MoLife.
 - `sessions.php` — remembered-device credentials and cookie rotation
 - `tokens.php` — email normalization, one-use auth tokens, verification URLs, housekeeping, and verification/registration throttle policies
 - `invites.php` — owner invitation lifecycle
-- `mailer.php` — authenticated SMTP transport and transactional account emails
+- `mailer.php` — authenticated SMTP transport, transactional account emails, and optional verified-registration operator notifications
 - `state-bridge.php` — **MoLife compatibility adapter only** for remembered sessions/invites created before the dedicated auth tables existed
 
 The public files one directory up (`login.php`, `register.php`, `verify-email.php`, and so on) remain HTTP adapters. They preserve the existing API contract and are intentionally separate from the auth primitives.
