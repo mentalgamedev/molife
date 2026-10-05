@@ -12,7 +12,10 @@ function dalli_registration_admin_notify_email(): string
 {
     $email = trim(dalli_config('app', 'registration_admin_notify_email'));
     if ($email === '') return '';
-    return filter_var($email, FILTER_VALIDATE_EMAIL) !== false ? $email : '';
+    if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+        throw new RuntimeException('registration_admin_notify_email is not a valid email address.');
+    }
+    return $email;
 }
 
 function dalli_mail_sender_domain(): string
