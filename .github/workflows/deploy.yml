@@ -96,6 +96,7 @@ jobs:
               'app' => [
                   'origin' => 'http://127.0.0.1:8080',
                   'registration_mode' => 'public',
+                  'registration_admin_notify_email' => 'admin@example.test',
                   'auth_hmac_key' => 'test-auth-hmac-key-0123456789abcdef',
                   'owner_setup_token' => 'test-owner-setup-token-0123456789abcdef',
               ],
