@@ -1,16 +1,16 @@
-const CACHE = 'molife-v4-23-1';
+const CACHE = 'molife-v4-23-2';
 const ASSETS = [
   './',
   './index.html',
-  './styles.css?v=4.23.1',
-  './pawnshop.css?v=4.23.1',
-  './mood.css?v=4.23.1',
-  './metrics.css?v=4.23.1',
-  './settings.css?v=4.23.1',
-  './info.css?v=4.23.1',
-  './app.js?v=4.23.1',
-  './metrics-viewer.js?v=4.23.1',
-  './cloud.js?v=4.23.1',
+  './styles.css?v=4.23.2',
+  './pawnshop.css?v=4.23.2',
+  './mood.css?v=4.23.2',
+  './metrics.css?v=4.23.2',
+  './settings.css?v=4.23.2',
+  './info.css?v=4.23.2',
+  './app.js?v=4.23.2',
+  './metrics-viewer.js?v=4.23.2',
+  './cloud.js?v=4.23.2',
   './manifest.webmanifest',
   './icon.svg',
   './fonts/PunkKid.ttf'
