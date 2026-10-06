@@ -43,12 +43,12 @@
     { id: 'flash-tube', name: 'Flash Tube', baseDamage: 25, weight: 17, flavor: 'Ridiculously super-charged. Produces enough light to briefly make poor decisions visible.' },
     { id: 'light-rabbit-launcher', name: 'Light Rabbit Launcher', baseDamage: 30, weight: 11, flavor: 'Deploys a highly luminous rabbit-shaped countermeasure at deeply irresponsible velocity.' },
     { id: 'sunflower-beam', name: 'Sunflower Beam', baseDamage: 35, weight: 7, flavor: 'Weaponized photosynthesis. Apparently the plants have had enough.' },
-    { id: 'light-sword', name: 'Light Sword', baseDamage: 40, weight: 6, flavor: 'A blade made mostly of light and questionable confidence. Very bad news for anything lurking in corners.' },
+    { id: 'light-sword', name: 'Light Sword', baseDamage: 40, weight: 6, flavor: 'A blade made mostly of light and reckless confidence. Very bad news for anything lurking in corners.' },
     { id: 'rite-of-illumination', name: 'Rite Of Illumination', baseDamage: 999, weight: 1, special: true, flavor: 'Phat Ed describes it as “basically a lamp.” Further questions were discouraged.' }
   ]);
 
   const ITEM_CONDITIONS = Object.freeze([
-    { id: 'questionable', name: 'Questionable', multiplier: 0.5, weight: 50 },
+    { id: 'questionable', name: 'Dubious', multiplier: 0.5, weight: 50 },
     { id: 'standard', name: 'Standard', multiplier: 1, weight: 30 },
     { id: 'pimped', name: 'Pimped', multiplier: 1.5, weight: 15 },
     { id: 'over-engineered', name: 'Over-engineered', multiplier: 2, weight: 5 }
@@ -90,7 +90,7 @@
     { id: 'moles-combo', tags: ['combo'], weight: 8, text: 'MO.LES.TECH ANALYTICS FLAG ORDERED ACTION SEQUENCE AS “POSSIBLY INTENTIONAL”' },
     { id: 'moles-overkill', tags: ['overkill'], weight: 9, text: 'MO.LES.TECH SAFETY MODEL CLASSIFIES OVERKILL AS “WITHIN DEMO PARAMETERS”' },
 
-    { id: 'phat-ed-questionable', tags: ['item', 'loot'], weight: 12, text: 'PHAT ED’S PAWNSHOP REMINDS CUSTOMERS THAT “QUESTIONABLE” IS A CONDITION, NOT A WARRANTY CATEGORY' },
+    { id: 'phat-ed-questionable', tags: ['item', 'loot'], weight: 12, text: 'PHAT ED’S PAWNSHOP REMINDS CUSTOMERS THAT “DUBIOUS” IS A CONDITION, NOT A WARRANTY CATEGORY' },
     { id: 'phat-ed-light-sword', tags: ['item'], weight: 10, text: 'PHAT ED’S PAWNSHOP DECLINES COMMENT ON LIGHT-SWORD-ADJACENT INVENTORY' },
     { id: 'phat-ed-receipt', tags: ['item'], weight: 10, text: 'PHAT ED’S PAWNSHOP: NO RECEIPT, NO REFUND, NO MEMORY OF THIS CONVERSATION' },
     { id: 'phat-ed-crate', tags: ['loot'], weight: 12, text: 'UNMARKED CRATE APPEARS NEAR PHAT ED’S PAWNSHOP; ED CALLS TIMING “PURELY ATMOSPHERIC”' },
@@ -125,7 +125,7 @@
   const CRESTFALLEN_DAILY_REFERENCES = Object.freeze({
     item: [
       ['PAWNSHOP INDUSTRY DISTANCES ITSELF FROM DAILY INCIDENT', 'Phat Ed’s Pawnshop issued a statement consisting primarily of “no receipt, no comment.”'],
-      ['QUESTIONABLE ITEM SOLVES PROBLEM; CREATES SEVERAL NEW ONES', 'Crestfallen officials confirmed the thing worked and immediately regretted confirming anything.']
+      ['DUBIOUS ITEM SOLVES PROBLEM; CREATES SEVERAL NEW ONES', 'Crestfallen officials confirmed the thing worked and immediately regretted confirming anything.']
     ],
     work: [
       ['LOCAL PRODUCTIVITY INCIDENT DRAWS CORPORATE ATTENTION', 'mo.les.tech called the results promising. The Mogreen campaign called them inevitable.'],
@@ -2235,7 +2235,7 @@
       item: [
         ['PAWNSHOP MERCHANDISE RESOLVES INTERNAL DISPUTE', `${summary.itemsUsed} questionable item${summary.itemsUsed === 1 ? '' : 's'} used. Officials confirm this still counts as personal development.`],
         ['CITIZEN SKIPS PERSONAL GROWTH, REACHES FOR PHAT ED’S STOCK', 'The Dark Doppelgänger was unavailable for comment after a brief illumination-related incident.'],
-        ['QUESTIONABLE PROCUREMENT ENDS DAILY HOSTILITIES', 'Authorities stress that the item was earned through previous good behavior, which somehow makes this worse.']
+        ['DUBIOUS PROCUREMENT ENDS DAILY HOSTILITIES', 'Authorities stress that the item was earned through previous good behavior, which somehow makes this worse.']
       ],
       overkill: [
         ['DARK SELF DEFEATED; USER CONTINUES HITTING IT FOR ADMINISTRATIVE REASONS', `${summary.overkill} points of overkill were recorded. Authorities insist this was probably unnecessary.`],
@@ -3077,7 +3077,7 @@
       'Unmarked crate recovered. Phat Ed’s Pawnshop denies recognizing the handwriting.',
       'Pawnshop delivery received. Receipt field contains only a shrug.',
       'Mystery crate located after hostilities. Phat Ed requests everyone stop looking at him.',
-      'Questionable anti-darkness item detected. Warranty status: spiritually complicated.'
+      'Dubious anti-darkness item detected. Warranty status: spiritually complicated.'
     ], `${state.current.date}|crate-flavor`);
   }
 
@@ -3168,7 +3168,7 @@
     } else if (summary.isVictory && loot.rolled) {
       els.lootDropMessage.textContent = 'No Pawnshop item today. Phat Ed appears unmoved.';
     } else {
-      els.lootDropMessage.textContent = 'Each victory has a 40% chance to attract one questionable item while you have room.';
+      els.lootDropMessage.textContent = 'Each victory has a 40% chance to attract one dubious item while you have room.';
     }
 
     els.arsenalStatus.textContent = summary.isVictory
@@ -3176,8 +3176,8 @@
       : inventory.length >= ITEM_CAPACITY
         ? 'Storage full · use something before Phat Ed “finds” another item.'
         : inventory.length
-          ? 'Select an item to inspect Phat Ed’s questionable merchandise.'
-          : 'Empty. Win fights for a chance to acquire questionable merchandise.';
+          ? 'Select an item to inspect Phat Ed’s dubious merchandise.'
+          : 'Empty. Win fights for a chance to acquire dubious merchandise.';
 
     const sortedInventory = [...inventory]
       .sort((a, b) => b.damage - a.damage || b.acquiredAt - a.acquiredAt);
