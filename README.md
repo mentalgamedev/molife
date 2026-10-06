@@ -434,6 +434,20 @@ Admin-mail delivery is deliberately non-fatal. Activation is committed first; if
 
 State schema remains **v11** and no database migration is required.
 
+## v4.24 — Bureau of Authorized Alternate Selves
+
+MoLife now supports **three fixed configuration profiles** with one-click switching. Each profile owns the complete challenge-settings payload: enemy HP, Focus/Resistance/Chill tuning, categories/colors, Actions and combos. Progression, today's fight, One-offs, Mood/history, Pawnshop inventory, onboarding and account identity remain shared.
+
+Profiles and Settings Templates deliberately use the **same normalized settings schema and validation path**. Exporting a template exports the active profile's settings; importing one replaces only the active profile's settings. This avoids maintaining two subtly different definitions of a MoLife configuration and keeps later expansion to a flexible profile count straightforward.
+
+Existing v11 users migrate safely to state schema **v12**: their current settings are cloned into Profile 1, Profile 2 and Profile 3, with Profile 1 active. The migration does not re-run the pre-v11 stock Action-damage conversion, so user-customized v11 values remain untouched. Shared One-offs keep their stored category association across profile switches; when the active profile lacks that category, they temporarily appear under Uncategorized instead of being destructively reassigned.
+
+Settings also gains active-profile cleanup controls for **Remove all categories**, **Remove all Actions**, and **Remove categories + Actions**. Uncategorized remains the permanent fallback. Removing Actions also removes dependent combos; shared progression/history and the other profiles are unaffected.
+
+Verified non-owner accounts can now delete themselves from the Account dialog. Deletion requires the current password, exact username confirmation and a final destructive confirmation. The server enforces same-origin and CSRF checks, re-verifies the password, deletes the user transactionally, relies on foreign-key cascades for synced state/sessions/auth tokens, clears browser authentication, and removes that account's local cache. The owner account is intentionally protected until an explicit ownership-transfer flow exists.
+
+No SQL migration is required. The bounded state/API request ceiling is raised from **256 KiB to 512 KiB** to provide headroom for three legal profile payloads; server validation still enforces the same per-profile settings limits.
+
 ## Self-hosting
 
 See [DEPLOY.md](DEPLOY.md) for the provider-neutral self-hosting guide.
