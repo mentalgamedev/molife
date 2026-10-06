@@ -275,6 +275,31 @@ $blockedRemember = dalli_try_remember_login($pdo);
 test_assert($blockedRemember === null, 'inactive account must not restore from remembered device');
 $pdo->prepare("UPDATE users SET status = 'active' WHERE id = ?")->execute([$userId]);
 
+$deleteProbeHash = dalli_hash_password('delete probe password phrase');
+$pdo->prepare(
+    "INSERT INTO users (username, email, password_hash, role, status, email_verified_at, password_changed_at)
+     VALUES ('deleteprobe', 'deleteprobe@example.test', ?, 'user', 'active', NOW(), NOW())"
+)->execute([$deleteProbeHash]);
+$deleteProbeId = (int) $pdo->lastInsertId();
+dalli_store_envelope($pdo, $deleteProbeId, dalli_empty_envelope(), 0);
+dalli_issue_auth_token($pdo, $deleteProbeId, 'email_verify', 600, []);
+$pdo->prepare(
+    "INSERT INTO auth_sessions
+        (user_id, selector, validator_hash, created_at, last_used_at, expires_at)
+     VALUES (?, ?, ?, NOW(), NOW(), DATE_ADD(NOW(), INTERVAL 1 DAY))"
+)->execute([
+    $deleteProbeId,
+    bin2hex(random_bytes(16)),
+    hash('sha256', bin2hex(random_bytes(32))),
+]);
+test_assert((int) $pdo->query("SELECT COUNT(*) FROM user_state WHERE user_id = {$deleteProbeId}")->fetchColumn() === 1, 'delete probe should own cloud state');
+test_assert((int) $pdo->query("SELECT COUNT(*) FROM auth_sessions WHERE user_id = {$deleteProbeId}")->fetchColumn() === 1, 'delete probe should own remembered session data');
+test_assert((int) $pdo->query("SELECT COUNT(*) FROM auth_tokens WHERE user_id = {$deleteProbeId}")->fetchColumn() >= 1, 'delete probe should own auth token data');
+$pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$deleteProbeId]);
+test_assert((int) $pdo->query("SELECT COUNT(*) FROM user_state WHERE user_id = {$deleteProbeId}")->fetchColumn() === 0, 'account deletion should cascade cloud state');
+test_assert((int) $pdo->query("SELECT COUNT(*) FROM auth_sessions WHERE user_id = {$deleteProbeId}")->fetchColumn() === 0, 'account deletion should cascade remembered sessions');
+test_assert((int) $pdo->query("SELECT COUNT(*) FROM auth_tokens WHERE user_id = {$deleteProbeId}")->fetchColumn() === 0, 'account deletion should cascade auth tokens');
+
 test_assert(dalli_rate_consume_strict('test_strict', 'global', 2, 3600), 'strict limiter should allow first hit');
 test_assert(dalli_rate_consume_strict('test_strict', 'global', 2, 3600), 'strict limiter should allow final budgeted hit');
 test_assert(!dalli_rate_consume_strict('test_strict', 'global', 2, 3600), 'strict limiter should reject over-budget hit');
