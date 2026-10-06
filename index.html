@@ -9,12 +9,12 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="preload" href="fonts/PunkKid.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=4.23.2">
-  <link rel="stylesheet" href="pawnshop.css?v=4.23.2">
-  <link rel="stylesheet" href="mood.css?v=4.23.2">
-  <link rel="stylesheet" href="metrics.css?v=4.23.2">
-  <link rel="stylesheet" href="settings.css?v=4.23.2">
-  <link rel="stylesheet" href="info.css?v=4.23.2">
+  <link rel="stylesheet" href="styles.css?v=4.24">
+  <link rel="stylesheet" href="pawnshop.css?v=4.24">
+  <link rel="stylesheet" href="mood.css?v=4.24">
+  <link rel="stylesheet" href="metrics.css?v=4.24">
+  <link rel="stylesheet" href="settings.css?v=4.24">
+  <link rel="stylesheet" href="info.css?v=4.24">
 </head>
 <body>
   <div class="city-noise" aria-hidden="true"></div>
@@ -33,9 +33,10 @@
       <div class="brand-block">
         <h1 class="brand-title" aria-label="MoLife"><span class="brand-mo">Mo</span><span class="brand-life">Life</span><span class="brand-tm">™</span></h1>
         <div class="brand-subline"><strong>Daily Struggle Assistant</strong><span> · powered by MoThink-6.7</span></div>
-        <div class="app-version" aria-label="MoLife version 4.23.2">v4.23.2 · Bureau of New Citizens</div>
+        <div class="app-version" aria-label="MoLife version 4.24">v4.24 · Bureau of Authorized Alternate Selves</div>
         <div id="todayLabel" class="muted"></div>
       </div>
+      <div id="profileSwitcher" class="profile-switcher" role="group" aria-label="Switch MoLife profile"></div>
       <div class="topbar-actions">
         <button id="infoButton" class="icon-button info-button" type="button" aria-label="About MoLife" title="About MoLife"><span aria-hidden="true">i</span></button>
         <button id="settingsButton" class="icon-button" type="button" aria-label="Open settings" title="Settings">⚙</button>
@@ -439,6 +440,17 @@
         <button id="closeSettingsButton" class="icon-button" aria-label="Close settings" type="button">×</button>
       </div>
 
+      <section class="settings-section profile-settings-section">
+        <div class="settings-section-head">
+          <div>
+            <h3>Profiles</h3>
+            <p>Three fast-switch configurations for the same MoLife account. Profiles contain exactly the same challenge data as Settings Templates: combat tuning, categories, Actions and combos.</p>
+          </div>
+        </div>
+        <div id="profilesEditor" class="profiles-editor"></div>
+        <p class="category-fallback-note">Progression, today’s fight, One-offs, mood/history, Pawnshop items and account data are shared across profiles.</p>
+      </section>
+
       <section class="settings-section daily-challenge-section">
         <h3>Daily challenge</h3>
         <label class="field-row">
@@ -603,11 +615,26 @@
       </section>
 
 
+      <section class="settings-section configuration-cleanup-section">
+        <div class="settings-section-head">
+          <div>
+            <h3>Configuration cleanup</h3>
+            <p>These operations affect only the active profile. Shared progression, history, One-offs and Pawnshop items stay intact.</p>
+          </div>
+        </div>
+        <div class="configuration-cleanup-actions">
+          <button id="removeAllCategoriesButton" class="danger-button danger-button-quiet" type="button">Remove all categories</button>
+          <button id="removeAllActionsButton" class="danger-button danger-button-quiet" type="button">Remove all actions</button>
+          <button id="removeAllCategoriesActionsButton" class="danger-button" type="button">Remove categories + actions</button>
+        </div>
+        <p class="category-fallback-note">Uncategorized is permanent. Removing all categories moves existing Actions and One-offs there. Removing all Actions also removes combos that depend on them.</p>
+      </section>
+
       <section class="settings-section template-section">
         <div class="settings-section-head">
           <div>
             <h3>Settings templates</h3>
-            <p>Export your current challenge setup as a lightweight template, then swap between different category/action/combo systems without touching your progression or Phat Ed’s Pawnshop inventory.</p>
+            <p>Export or import the active profile as a lightweight template. Profiles and templates use the same settings payload, so neither can silently lose configuration fields.</p>
           </div>
         </div>
         <div class="template-actions">
@@ -638,7 +665,7 @@
       <section class="settings-section danger-zone">
         <div>
           <h3>Fresh start</h3>
-          <p>Reset all game progress, categories, actions, One-offs, combos, Pawnshop items, mood history, Level, Street Cred and history. Your account/login remains untouched.</p>
+          <p>Reset all game progress, all three profiles, categories, actions, One-offs, combos, Pawnshop items, mood history, Level, Street Cred and history. Your account/login remains untouched.</p>
         </div>
         <button id="resetGameButton" class="danger-button" type="button">Reset game data</button>
       </section>
@@ -686,8 +713,8 @@
     </article>
   </template>
 
-  <script src="app.js?v=4.23.2" defer></script>
-  <script src="metrics-viewer.js?v=4.23.2" defer></script>
-  <script src="cloud.js?v=4.23.2" defer></script>
+  <script src="app.js?v=4.24" defer></script>
+  <script src="metrics-viewer.js?v=4.24" defer></script>
+  <script src="cloud.js?v=4.24" defer></script>
 </body>
 </html>
