@@ -589,6 +589,12 @@
     return activeProfile(targetState)?.name || 'Profile 1';
   }
 
+  function effectiveOneOffCategoryId(oneOff, settings = activeSettings()) {
+    return settings.categories.some(category => category.id === oneOff?.categoryId)
+      ? oneOff.categoryId
+      : UNCATEGORIZED_ID;
+  }
+
 
 
   function emptyLootState() {
@@ -828,10 +834,10 @@
         fullEnemyHp: clampInt(candidate?.settings?.goal, 20, 1000, 100),
         categories: deepClone(Array.isArray(candidate?.settings?.categories)
           ? candidate.settings.categories
-          : DEFAULT_STATE.settings.categories),
+          : DEFAULT_SETTINGS.categories),
         actions: (Array.isArray(candidate?.settings?.actions)
           ? candidate.settings.actions
-          : DEFAULT_STATE.settings.actions
+          : DEFAULT_SETTINGS.actions
         ).map(action => ({
           id: action?.id,
           categoryId: action?.categoryId,
@@ -1248,7 +1254,7 @@
         oneOffIds.add(id);
         return {
           id,
-          categoryId: categoryIds.has(String(oneOff?.categoryId)) ? String(oneOff.categoryId) : UNCATEGORIZED_ID,
+          categoryId: /^[A-Za-z0-9_-]{1,64}$/.test(String(oneOff?.categoryId || '')) ? String(oneOff.categoryId) : UNCATEGORIZED_ID,
           name: String(oneOff?.name || 'Unfinished business').slice(0, 100),
           baseDamage: clampInt(oneOff?.baseDamage, 1, 200, 10),
           createdAt: normalizeTimestamp(oneOff?.createdAt) || Date.now()
@@ -3222,7 +3228,7 @@
     const visibleCategories = activeSettings().categories.filter(category => {
       if (category.id !== UNCATEGORIZED_ID) return true;
       const hasActions = activeSettings().actions.some(action => action.categoryId === UNCATEGORIZED_ID && action.trackVisible !== false);
-      const hasOneOffs = state.oneOffs.some(oneOff => oneOff.categoryId === UNCATEGORIZED_ID);
+      const hasOneOffs = state.oneOffs.some(oneOff => effectiveOneOffCategoryId(oneOff) === UNCATEGORIZED_ID);
       const hasDamage = (summary.categoryBaseDamage[UNCATEGORIZED_ID] || 0) > 0;
       return hasActions || hasOneOffs || hasDamage;
     });
@@ -3300,7 +3306,7 @@
           || (originalOrder.get(a.id) ?? 0) - (originalOrder.get(b.id) ?? 0));
 
       const oneOffs = state.oneOffs
-        .filter(oneOff => oneOff.categoryId === category.id)
+        .filter(oneOff => effectiveOneOffCategoryId(oneOff) === category.id)
         .sort((a, b) => a.createdAt - b.createdAt);
 
       if (!actions.length && !oneOffs.length) {
@@ -3691,12 +3697,6 @@
     const settings = activeSettings();
     state.current.comboProgress = {};
 
-    const categoryIds = new Set(settings.categories.map(category => category.id));
-    state.oneOffs = state.oneOffs.map(oneOff => ({
-      ...oneOff,
-      categoryId: categoryIds.has(oneOff.categoryId) ? oneOff.categoryId : UNCATEGORIZED_ID
-    }));
-
     const actionIds = new Set(settings.actions.map(action => action.id));
     state.current.requiredActions = (state.current.requiredActions || [])
       .filter(required => actionIds.has(required.actionId));
@@ -3799,9 +3799,10 @@
           state.profiles.activeId = profile.id;
           reconcileSharedStateWithActiveSettings();
           saveState();
-          settingsDraft = deepClone(activeSettings());
-          openSettings();
+          settingsDraft = null;
+          els.settingsDialog.close();
           render();
+          openSettings();
         });
 
         const copyButton = document.createElement('button');
@@ -4802,12 +4803,6 @@
     const previousCombos = new Map(activeSettings().combos.map(combo => [combo.id, combo]));
     setActiveSettings(result.settings);
 
-    const nextCategoryIds = new Set(activeSettings().categories.map(category => category.id));
-    state.oneOffs = state.oneOffs.map(oneOff => ({
-      ...oneOff,
-      categoryId: nextCategoryIds.has(oneOff.categoryId) ? oneOff.categoryId : UNCATEGORIZED_ID
-    }));
-
     const nextActionIds = new Set(activeSettings().actions.map(action => action.id));
     state.current.requiredActions = (state.current.requiredActions || [])
       .filter(required => nextActionIds.has(required.actionId));
@@ -4956,11 +4951,6 @@
       settingsDraft = deepClone(importedSettings);
       setActiveSettings(importedSettings);
       state.current.comboProgress = {};
-      const importedCategoryIds = new Set(activeSettings().categories.map(category => category.id));
-      state.oneOffs = state.oneOffs.map(oneOff => ({
-        ...oneOff,
-        categoryId: importedCategoryIds.has(oneOff.categoryId) ? oneOff.categoryId : UNCATEGORIZED_ID
-      }));
       const importedActionIds = new Set(activeSettings().actions.map(action => action.id));
       state.current.requiredActions = (state.current.requiredActions || [])
         .filter(required => importedActionIds.has(required.actionId));
