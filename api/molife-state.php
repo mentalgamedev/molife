@@ -1732,6 +1732,146 @@ function dalli_validate_state_v5_v11(mixed $state): array
 }
 
 
+
+function dalli_validate_state_v12(mixed $state): array
+{
+    if (!is_array($state)
+        || ($state['version'] ?? null) !== 12
+        || !dalli_keys_allowed($state, [
+            'version', 'profiles', 'progression', 'current', 'history',
+            'inventory', 'oneOffs', 'metrics', 'onboarding'
+        ])) {
+        dalli_fail('Unsupported MoLife state.', 422);
+    }
+
+    $profiles = $state['profiles'] ?? null;
+    if (!is_array($profiles)
+        || !dalli_keys_allowed($profiles, ['activeId', 'slots'])
+        || !is_string($profiles['activeId'] ?? null)
+        || !is_array($profiles['slots'] ?? null)
+        || count($profiles['slots']) !== 3) {
+        dalli_fail('Invalid profile state.', 422);
+    }
+
+    $requiredProfileIds = ['profile-1', 'profile-2', 'profile-3'];
+    $slotsById = [];
+
+    foreach ($profiles['slots'] as $slot) {
+        if (!is_array($slot)
+            || !dalli_keys_allowed($slot, ['id', 'name', 'settings'])
+            || !is_string($slot['id'] ?? null)
+            || !in_array($slot['id'], $requiredProfileIds, true)
+            || isset($slotsById[$slot['id']])
+            || !dalli_string_ok($slot['name'] ?? null, 1, 40)
+            || !is_array($slot['settings'] ?? null)) {
+            dalli_fail('Invalid profile data.', 422);
+        }
+
+        $categoryIds = [];
+        foreach (($slot['settings']['categories'] ?? []) as $category) {
+            if (is_array($category) && is_string($category['id'] ?? null)) {
+                $categoryIds[$category['id']] = true;
+            }
+        }
+        if (!isset($categoryIds['uncategorized'])) {
+            dalli_fail('Every profile requires the Uncategorized fallback.', 422);
+        }
+
+        $slotsById[$slot['id']] = $slot;
+    }
+
+    foreach ($requiredProfileIds as $profileId) {
+        if (!isset($slotsById[$profileId])) {
+            dalli_fail('Invalid profile set.', 422);
+        }
+    }
+
+    $activeId = $profiles['activeId'];
+    if (!isset($slotsById[$activeId])) {
+        dalli_fail('Invalid active profile.', 422);
+    }
+
+    // One-offs are shared across profiles. A category reference may be unavailable
+    // in the active profile, in which case the client presents it as Uncategorized
+    // without destroying the stored association.
+    $oneOffs = $state['oneOffs'] ?? null;
+    if (!is_array($oneOffs) || count($oneOffs) > 500) {
+        dalli_fail('Invalid One-offs.', 422);
+    }
+    foreach ($oneOffs as $oneOff) {
+        if (!is_array($oneOff)
+            || !dalli_keys_allowed($oneOff, ['id', 'categoryId', 'name', 'baseDamage', 'createdAt'])
+            || !dalli_string_ok($oneOff['id'] ?? null, 1, 128)
+            || !is_string($oneOff['categoryId'] ?? null)
+            || preg_match('/^[A-Za-z0-9_-]{1,64}$/', $oneOff['categoryId']) !== 1
+            || !dalli_string_ok($oneOff['name'] ?? null, 1, 100)
+            || !is_int($oneOff['baseDamage'] ?? null)
+            || $oneOff['baseDamage'] < 1
+            || $oneOff['baseDamage'] > 200
+            || (is_int($oneOff['createdAt'] ?? null) || is_float($oneOff['createdAt'] ?? null)) === false
+            || (float) $oneOff['createdAt'] <= 0) {
+            dalli_fail('Invalid One-off data.', 422);
+        }
+    }
+
+    foreach ($requiredProfileIds as $profileId) {
+        $slot = $slotsById[$profileId];
+        $synthetic = $state;
+        $synthetic['version'] = 11;
+        $synthetic['settings'] = $slot['settings'];
+        unset($synthetic['profiles']);
+
+        if ($profileId === $activeId) {
+            $activeCategoryIds = [];
+            foreach (($slot['settings']['categories'] ?? []) as $category) {
+                if (is_array($category) && is_string($category['id'] ?? null)) {
+                    $activeCategoryIds[$category['id']] = true;
+                }
+            }
+
+            $synthetic['oneOffs'] = array_map(
+                static function (array $oneOff) use ($activeCategoryIds): array {
+                    if (!isset($activeCategoryIds[$oneOff['categoryId']])) {
+                        $oneOff['categoryId'] = 'uncategorized';
+                    }
+                    return $oneOff;
+                },
+                $oneOffs
+            );
+        } else {
+            // Inactive profiles have no active-fight references. Validate their
+            // settings against the same v11 rules with neutral transient state.
+            $synthetic['oneOffs'] = [];
+            $synthetic['current'] = [
+                'date' => '',
+                'maxHp' => 0,
+                'transactions' => [],
+                'comboProgress' => [],
+                'requiredActions' => [],
+                'defeatedAt' => null,
+                'victoryXpAwarded' => 0,
+                'loot' => [
+                    'rolled' => false,
+                    'available' => false,
+                    'claimed' => false,
+                    'pendingItem' => null,
+                ],
+                'dayCard' => null,
+            ];
+        }
+
+        dalli_validate_state_v5_v11($synthetic);
+    }
+
+    $encoded = json_encode($state, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($encoded === false || strlen($encoded) > DALLI_MAX_BODY_BYTES) {
+        dalli_fail('MoLife state is too large.', 413);
+    }
+
+    return $state;
+}
+
+
 function dalli_validate_state(mixed $state): array
 {
     $version = is_array($state) ? ($state['version'] ?? null) : null;
@@ -1739,6 +1879,7 @@ function dalli_validate_state(mixed $state): array
     if ($version === 3) return dalli_validate_state_v3($state);
     if ($version === 4) return dalli_validate_state_v4($state);
     if ($version === 5 || $version === 6 || $version === 7 || $version === 8 || $version === 9 || $version === 10 || $version === 11) return dalli_validate_state_v5_v11($state);
+    if ($version === 12) return dalli_validate_state_v12($state);
     dalli_fail('Unsupported Dalli state.', 422);
 }
 
