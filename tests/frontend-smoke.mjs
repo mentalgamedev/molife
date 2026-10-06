@@ -249,7 +249,7 @@ if (!html.includes('Actions (type, damage, order, visibility and Required counts
     || !html.includes('id="removeAllCategoriesButton"')
     || !html.includes('id="removeAllActionsButton"')
     || !html.includes('id="removeAllCategoriesActionsButton"')) {
-  fail('v4.26 settings-only profile/template/cleanup UI contract is incomplete');
+  fail('v4.26.1 settings-only profile/template/cleanup UI contract is incomplete');
 }
 
 if (app.includes('profileSwitcher')
@@ -291,6 +291,11 @@ if (!deleteAccountApi.includes("password_verify($password")
 
 if (/questionable|suspiciously/i.test(html) || /suspiciously/i.test(manifest)) {
   fail('Retired user-facing questionable/suspiciously copy returned');
+}
+
+const settingsCss = read('settings.css');
+if (!settingsCss.includes('.profile-settings-section .settings-section-head {\n    flex-direction: column;\n    align-items: stretch;')) {
+  fail('Mobile profile header must stack vertically instead of retaining the desktop flex row');
 }
 
 const mainCss = read('styles.css');
