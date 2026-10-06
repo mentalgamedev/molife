@@ -179,6 +179,36 @@ test_assert(($validatedV12['profiles']['slots'][0]['settings']['chillMultiplier'
 test_assert(($validatedV12['profiles']['slots'][1]['settings']['categories'][0]['id'] ?? null) === 'uncategorized', 'minimal profiles should keep the permanent fallback category');
 test_assert(($validatedV12['oneOffs'][0]['categoryId'] ?? null) === 'work', 'shared One-off category references should remain stored even when absent from the active profile');
 
+$v13Single = $v12State;
+$v13Single['version'] = 13;
+$v13Single['profiles'] = [
+    'activeId' => 'profile-default',
+    'slots' => [[
+        'id' => 'profile-default',
+        'name' => 'Default',
+        'settings' => $v12PrimarySettings,
+    ]],
+];
+$validatedV13Single = dalli_validate_state($v13Single);
+test_assert(($validatedV13Single['version'] ?? null) === 13, 'v13 single-profile state should validate');
+test_assert(count($validatedV13Single['profiles']['slots'] ?? []) === 1, 'v13 should allow a single default profile');
+test_assert(($validatedV13Single['profiles']['activeId'] ?? null) === 'profile-default', 'v13 should preserve arbitrary stable profile IDs');
+
+$v13Five = $v13Single;
+$v13Five['profiles'] = [
+    'activeId' => 'profile-extra-4',
+    'slots' => [
+        ['id' => 'profile-default', 'name' => 'Default', 'settings' => $v12PrimarySettings],
+        ['id' => 'profile-extra-1', 'name' => 'Profile 2', 'settings' => $v12PrimarySettings],
+        ['id' => 'profile-extra-2', 'name' => 'Profile 3', 'settings' => $v12MinimalSettings],
+        ['id' => 'profile-extra-3', 'name' => 'Profile 4', 'settings' => $v12PrimarySettings],
+        ['id' => 'profile-extra-4', 'name' => 'Profile 5', 'settings' => $v12PrimarySettings],
+    ],
+];
+$validatedV13Five = dalli_validate_state($v13Five);
+test_assert(count($validatedV13Five['profiles']['slots'] ?? []) === 5, 'v13 should allow up to five profiles');
+test_assert(($validatedV13Five['profiles']['activeId'] ?? null) === 'profile-extra-4', 'v13 should allow any stored profile to be active');
+
 $pdo = dalli_pdo();
 test_assert(dalli_send_registration_admin_notification($pdo, 'nobody', 'nobody@example.test') === false, 'disabled admin notification should be a no-op even without mail transport');
 test_assert(dalli_auth_schema_ready($pdo), 'modern auth schema should be detected');
