@@ -112,7 +112,7 @@
 }
 
 
-/* MoLife v4.26 — Department of Personal Space */
+/* MoLife v4.26.1 — Department of Vertical Integration */
 .profile-settings-section {
   padding-bottom: 22px;
 }
@@ -228,6 +228,8 @@
   .profile-editor-row {
     grid-template-columns: 1fr;
     align-items: stretch;
+    gap: 14px;
+    padding: 15px 14px;
   }
 
   .profile-editor-actions {
@@ -236,14 +238,22 @@
   }
 
   .profile-settings-section .settings-section-head {
+    flex-direction: column;
     align-items: stretch;
     gap: 12px;
     margin-bottom: 16px;
   }
 
+  .profile-settings-section .settings-section-head > div {
+    width: 100%;
+    min-width: 0;
+  }
+
   .profile-settings-section .settings-section-head > .secondary-button {
     width: 100%;
+    min-height: 44px;
     margin-top: 0;
+    align-self: stretch;
   }
 
   .profile-editor-actions .secondary-button,
