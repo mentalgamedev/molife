@@ -1,10 +1,12 @@
 (() => {
   'use strict';
 
-  const STATE_VERSION = 12;
+  const STATE_VERSION = 13;
   const LEGACY_TEMPLATE_VERSION = 1;
   const TEMPLATE_VERSION = 2;
-  const PROFILE_IDS = Object.freeze(['profile-1', 'profile-2', 'profile-3']);
+  const DEFAULT_PROFILE_ID = 'profile-default';
+  const PROFILE_MIN = 1;
+  const PROFILE_MAX = 5;
   const PROFILE_NAME_MAX = 40;
   const ITEM_DROP_CHANCE = 0.40;
   const ITEM_CAPACITY = 8;
@@ -229,12 +231,12 @@
   const DEFAULT_STATE = {
     version: STATE_VERSION,
     profiles: {
-      activeId: PROFILE_IDS[0],
-      slots: PROFILE_IDS.map((id, index) => ({
-        id,
-        name: `Profile ${index + 1}`,
+      activeId: DEFAULT_PROFILE_ID,
+      slots: [{
+        id: DEFAULT_PROFILE_ID,
+        name: 'Default',
         settings: deepClone(DEFAULT_SETTINGS)
-      }))
+      }]
     },
     progression: {
       victoryXp: 0,
@@ -273,8 +275,9 @@
 
   const els = {
     todayLabel: document.querySelector('#todayLabel'),
-    profileSwitcher: document.querySelector('#profileSwitcher'),
     profilesEditor: document.querySelector('#profilesEditor'),
+    addProfileButton: document.querySelector('#addProfileButton'),
+    profileCountNote: document.querySelector('#profileCountNote'),
     removeAllCategoriesButton: document.querySelector('#removeAllCategoriesButton'),
     removeAllActionsButton: document.querySelector('#removeAllActionsButton'),
     removeAllCategoriesActionsButton: document.querySelector('#removeAllCategoriesActionsButton'),
@@ -1043,12 +1046,12 @@
       : DEFAULT_SETTINGS;
     migrated.version = STATE_VERSION;
     migrated.profiles = {
-      activeId: PROFILE_IDS[0],
-      slots: PROFILE_IDS.map((id, index) => ({
-        id,
-        name: `Profile ${index + 1}`,
+      activeId: DEFAULT_PROFILE_ID,
+      slots: [{
+        id: DEFAULT_PROFILE_ID,
+        name: 'Default',
         settings: deepClone(legacySettings)
-      }))
+      }]
     };
     delete migrated.settings;
     return migrated;
@@ -1056,6 +1059,12 @@
 
   function migrateV11State(candidate) {
     return migrateLegacySettingsToProfiles(candidate);
+  }
+
+  function migrateV12State(candidate) {
+    const migrated = deepClone(candidate);
+    migrated.version = STATE_VERSION;
+    return migrated;
   }
 
   function normalizeMetrics(value) {
@@ -1221,6 +1230,7 @@
     if (candidate?.version === 9) candidate = migrateV9State(candidate);
     if (candidate?.version === 10) candidate = migrateV10State(candidate);
     if (candidate?.version === 11) candidate = migrateV11State(candidate);
+    if (candidate?.version === 12) candidate = migrateV12State(candidate);
     if (candidate?.version === STATE_VERSION && !candidate.profiles && candidate.settings) {
       candidate = migrateLegacySettingsToProfiles(candidate);
     }
@@ -1228,18 +1238,36 @@
 
     const next = freshState();
     const rawSlots = Array.isArray(candidate.profiles?.slots) ? candidate.profiles.slots : [];
-    next.profiles.slots = PROFILE_IDS.map((id, index) => {
-      const sourceProfile = rawSlots.find(profile => profile?.id === id) || rawSlots[index] || null;
-      const rawName = String(sourceProfile?.name || `Profile ${index + 1}`).trim();
-      return {
-        id,
-        name: (rawName || `Profile ${index + 1}`).slice(0, PROFILE_NAME_MAX),
-        settings: normalizeSettings(sourceProfile?.settings, shouldMigrateDefaultActionDamage)
-      };
-    });
-    next.profiles.activeId = PROFILE_IDS.includes(String(candidate.profiles?.activeId))
-      ? String(candidate.profiles.activeId)
-      : PROFILE_IDS[0];
+    const seenProfileIds = new Set();
+    const normalizedProfiles = rawSlots
+      .slice(0, PROFILE_MAX)
+      .map((sourceProfile, index) => {
+        let id = String(sourceProfile?.id || '').trim();
+        if (!/^[A-Za-z0-9_-]{1,64}$/.test(id) || seenProfileIds.has(id)) {
+          id = `profile-${index + 1}`;
+          let suffix = index + 1;
+          while (seenProfileIds.has(id)) {
+            suffix += 1;
+            id = `profile-${suffix}`;
+          }
+        }
+        seenProfileIds.add(id);
+        const fallbackName = index === 0 ? 'Default' : `Profile ${index + 1}`;
+        const rawName = String(sourceProfile?.name || fallbackName).trim();
+        return {
+          id,
+          name: (rawName || fallbackName).slice(0, PROFILE_NAME_MAX),
+          settings: normalizeSettings(sourceProfile?.settings, shouldMigrateDefaultActionDamage)
+        };
+      });
+
+    next.profiles.slots = normalizedProfiles.length >= PROFILE_MIN
+      ? normalizedProfiles
+      : deepClone(DEFAULT_STATE.profiles.slots);
+    const requestedProfileId = String(candidate.profiles?.activeId || '');
+    next.profiles.activeId = next.profiles.slots.some(profile => profile.id === requestedProfileId)
+      ? requestedProfileId
+      : next.profiles.slots[0].id;
 
     const currentSettings = activeSettings(next);
     const categoryIds = new Set(currentSettings.categories.map(category => category.id));
@@ -1472,7 +1500,7 @@
       const raw = localStorage.getItem(storageKey);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      if (!parsed || ![2, 3, 4, 5, 6, 7, 8, 9, 10, 11, STATE_VERSION].includes(parsed.version)) return null;
+      if (!parsed || ![2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, STATE_VERSION].includes(parsed.version)) return null;
       return normalizeState(parsed);
     } catch (error) {
       console.warn('Could not read cached MoLife data:', error);
@@ -2750,7 +2778,6 @@
     ensureToday();
     const summary = getSummary();
 
-    renderProfileSwitcher();
     renderHero(summary);
     renderMoodTracker();
     renderProgression();
@@ -3704,44 +3731,104 @@
     finalizeVictoryIfNeeded();
   }
 
-  function renderProfileSwitcher() {
-    if (!els.profileSwitcher) return;
-    els.profileSwitcher.replaceChildren();
-
-    state.profiles.slots.forEach((profile, index) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'profile-switch-button';
-      button.dataset.profileId = profile.id;
-      button.classList.toggle('is-active', profile.id === state.profiles.activeId);
-      button.setAttribute('aria-pressed', profile.id === state.profiles.activeId ? 'true' : 'false');
-      button.title = `Switch to ${profile.name}`;
-
-      const number = document.createElement('span');
-      number.className = 'profile-switch-number';
-      number.textContent = String(index + 1);
-      const name = document.createElement('span');
-      name.className = 'profile-switch-name';
-      name.textContent = profile.name;
-      button.append(number, name);
-
-      button.addEventListener('click', () => switchProfile(profile.id));
-      els.profileSwitcher.append(button);
-    });
+  function loadActiveProfileIntoSettings({ announce = true } = {}) {
+    settingsDraft = deepClone(activeSettings());
+    settingsDraft.categories = ensureUncategorizedCategory(settingsDraft.categories);
+    settingsDraft.combos = Array.isArray(settingsDraft.combos) ? settingsDraft.combos : [];
+    els.goalInput.value = settingsDraft.fullEnemyHp;
+    els.focusFactorInput.value = clampNumber(settingsDraft.focusFactor, 1, 10, DEFAULT_FOCUS_FACTOR);
+    els.resistanceBuildupInput.value = clampNumber(settingsDraft.resistanceBuildup, 0, 2, DEFAULT_RESISTANCE_BUILDUP);
+    els.chillModeInput.checked = settingsDraft.chillModeEnabled === true;
+    els.chillMultiplierInput.value = clampNumber(
+      settingsDraft.chillMultiplier,
+      CHILL_MULTIPLIER_MIN,
+      CHILL_MULTIPLIER_MAX,
+      DEFAULT_CHILL_MULTIPLIER
+    );
+    syncChillSettingsControls();
+    renderProfilesEditor();
+    if (els.templateName) els.templateName.value = activeProfileName();
+    if (announce) {
+      els.settingsMessage.textContent = `Changes save automatically to ${activeProfileName()}. Enemy HP and Required-for-victory changes apply to the next daily fight.`;
+    }
+    if (els.newCategoryColor) {
+      const customCount = settingsDraft.categories.filter(
+        category => category.id !== UNCATEGORIZED_ID && !DEFAULT_CATEGORY_COLORS[category.id]
+      ).length;
+      els.newCategoryColor.value = CUSTOM_CATEGORY_COLORS[customCount % CUSTOM_CATEGORY_COLORS.length];
+    }
+    updateGoalPreview();
+    renderCategoriesEditor();
+    renderActionsEditor();
+    renderCombosEditor();
+    populateCategorySelect();
   }
 
-  function switchProfile(profileId) {
-    if (!PROFILE_IDS.includes(profileId) || profileId === state.profiles.activeId) return;
+  function activateProfileFromSettings(profileId) {
+    if (!state.profiles.slots.some(profile => profile.id === profileId)
+        || profileId === state.profiles.activeId) return;
 
-    if (settingsDraft && !commitSettingsDraft({ announce: false })) {
-      return;
-    }
+    if (settingsDraft && !commitSettingsDraft({ announce: false })) return;
 
     state.profiles.activeId = profileId;
-    settingsDraft = null;
     reconcileSharedStateWithActiveSettings();
     saveState();
+    loadActiveProfileIntoSettings();
     render();
+  }
+
+  function nextProfileName() {
+    const names = new Set(state.profiles.slots.map(profile => profile.name));
+    for (let index = 2; index <= PROFILE_MAX + 1; index += 1) {
+      const candidate = `Profile ${index}`;
+      if (!names.has(candidate)) return candidate;
+    }
+    return `Profile ${state.profiles.slots.length + 1}`;
+  }
+
+  function addProfile() {
+    if (state.profiles.slots.length >= PROFILE_MAX) return;
+    if (settingsDraft && !commitSettingsDraft({ announce: false })) return;
+
+    const profile = {
+      id: makeId('profile'),
+      name: nextProfileName(),
+      settings: deepClone(activeSettings())
+    };
+    state.profiles.slots.push(profile);
+    state.profiles.activeId = profile.id;
+    reconcileSharedStateWithActiveSettings();
+    saveState();
+    loadActiveProfileIntoSettings();
+    render();
+    els.settingsMessage.textContent = `${profile.name} added as a copy of the previous active profile.`;
+  }
+
+  function removeProfile(profileId) {
+    if (state.profiles.slots.length <= PROFILE_MIN) return;
+    const index = state.profiles.slots.findIndex(profile => profile.id === profileId);
+    if (index < 0) return;
+
+    if (settingsDraft && !commitSettingsDraft({ announce: false })) return;
+
+    const profile = state.profiles.slots[index];
+    if (!window.confirm(
+      `Remove profile “${profile.name}”?\n\nThis permanently deletes that profile's settings configuration. Shared progression, today's fight, One-offs, mood/history and Pawnshop items stay untouched.`
+    )) return;
+
+    const wasActive = profile.id === state.profiles.activeId;
+    state.profiles.slots.splice(index, 1);
+
+    if (wasActive) {
+      const replacement = state.profiles.slots[Math.min(index, state.profiles.slots.length - 1)];
+      state.profiles.activeId = replacement.id;
+      reconcileSharedStateWithActiveSettings();
+    }
+
+    saveState();
+    loadActiveProfileIntoSettings();
+    render();
+    els.settingsMessage.textContent = `${profile.name} removed.`;
   }
 
   function renderProfilesEditor() {
@@ -3773,7 +3860,6 @@
         profile.name = (nameInput.value.trim() || fallback).slice(0, PROFILE_NAME_MAX);
         nameInput.value = profile.name;
         saveState();
-        renderProfileSwitcher();
         renderProfilesEditor();
         if (els.templateName && profile.id === state.profiles.activeId) {
           els.templateName.value = profile.name;
@@ -3794,16 +3880,7 @@
         switchButton.type = 'button';
         switchButton.className = 'secondary-button';
         switchButton.textContent = 'Switch';
-        switchButton.addEventListener('click', () => {
-          if (settingsDraft && !commitSettingsDraft({ announce: false })) return;
-          state.profiles.activeId = profile.id;
-          reconcileSharedStateWithActiveSettings();
-          saveState();
-          settingsDraft = null;
-          els.settingsDialog.close();
-          render();
-          openSettings();
-        });
+        switchButton.addEventListener('click', () => activateProfileFromSettings(profile.id));
 
         const copyButton = document.createElement('button');
         copyButton.type = 'button';
@@ -3821,9 +3898,30 @@
         actions.append(switchButton, copyButton);
       }
 
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.className = 'danger-button danger-button-quiet';
+      removeButton.textContent = 'Remove';
+      removeButton.disabled = state.profiles.slots.length <= PROFILE_MIN;
+      removeButton.title = removeButton.disabled
+        ? 'At least one profile is required'
+        : `Remove ${profile.name}`;
+      removeButton.addEventListener('click', () => removeProfile(profile.id));
+      actions.append(removeButton);
+
       row.append(identity, nameLabel, actions);
       els.profilesEditor.append(row);
     });
+
+    if (els.addProfileButton) {
+      const atLimit = state.profiles.slots.length >= PROFILE_MAX;
+      els.addProfileButton.disabled = atLimit;
+      els.addProfileButton.textContent = atLimit ? 'Profile limit reached' : '+ Add profile';
+      els.addProfileButton.title = atLimit ? `Maximum ${PROFILE_MAX} profiles` : 'Add a copy of the active profile';
+    }
+    if (els.profileCountNote) {
+      els.profileCountNote.textContent = `${state.profiles.slots.length} / ${PROFILE_MAX} profiles · Profiles are managed here only. Progression, today's fight, One-offs, mood/history, Pawnshop items and account data are shared.`;
+    }
   }
 
   function clearActiveProfileConfiguration(mode) {
@@ -3867,34 +3965,7 @@
   }
 
   function openSettings() {
-    settingsDraft = deepClone(activeSettings());
-    settingsDraft.categories = ensureUncategorizedCategory(settingsDraft.categories);
-    settingsDraft.combos = Array.isArray(settingsDraft.combos) ? settingsDraft.combos : [];
-    els.goalInput.value = settingsDraft.fullEnemyHp;
-    els.focusFactorInput.value = clampNumber(settingsDraft.focusFactor, 1, 10, DEFAULT_FOCUS_FACTOR);
-    els.resistanceBuildupInput.value = clampNumber(settingsDraft.resistanceBuildup, 0, 2, DEFAULT_RESISTANCE_BUILDUP);
-    els.chillModeInput.checked = settingsDraft.chillModeEnabled === true;
-    els.chillMultiplierInput.value = clampNumber(
-      settingsDraft.chillMultiplier,
-      CHILL_MULTIPLIER_MIN,
-      CHILL_MULTIPLIER_MAX,
-      DEFAULT_CHILL_MULTIPLIER
-    );
-    syncChillSettingsControls();
-    renderProfilesEditor();
-    if (els.templateName) els.templateName.value = activeProfileName();
-    els.settingsMessage.textContent = `Changes save automatically to ${activeProfileName()}. Enemy HP and Required-for-victory changes apply to the next daily fight.`;
-    if (els.newCategoryColor) {
-      const customCount = settingsDraft.categories.filter(
-        category => category.id !== UNCATEGORIZED_ID && !DEFAULT_CATEGORY_COLORS[category.id]
-      ).length;
-      els.newCategoryColor.value = CUSTOM_CATEGORY_COLORS[customCount % CUSTOM_CATEGORY_COLORS.length];
-    }
-    updateGoalPreview();
-    renderCategoriesEditor();
-    renderActionsEditor();
-    renderCombosEditor();
-    populateCategorySelect();
+    loadActiveProfileIntoSettings();
 
     if (typeof els.settingsDialog.showModal === 'function') {
       els.settingsDialog.showModal();
@@ -5143,6 +5214,7 @@
     if (mode) sortActions(mode);
   });
 
+  els.addProfileButton?.addEventListener('click', addProfile);
   els.addCategoryButton.addEventListener('click', addCategoryFromForm);
   els.newActionType?.addEventListener('change', syncNewActionRequirementControls);
   els.newActionRequired?.addEventListener('change', syncNewActionRequirementControls);
