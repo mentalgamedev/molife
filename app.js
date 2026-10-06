@@ -1,9 +1,11 @@
 (() => {
   'use strict';
 
-  const STATE_VERSION = 11;
+  const STATE_VERSION = 12;
   const LEGACY_TEMPLATE_VERSION = 1;
   const TEMPLATE_VERSION = 2;
+  const PROFILE_IDS = Object.freeze(['profile-1', 'profile-2', 'profile-3']);
+  const PROFILE_NAME_MAX = 40;
   const ITEM_DROP_CHANCE = 0.40;
   const ITEM_CAPACITY = 8;
   const STORAGE_KEY = 'dailyXpGame.v2';
@@ -194,9 +196,7 @@
     { name: 'Head Honcho', min: 27 }
   ];
 
-  const DEFAULT_STATE = {
-    version: STATE_VERSION,
-    settings: {
+  const DEFAULT_SETTINGS = {
       fullEnemyHp: 100,
       focusCategoryId: 'work',
       focusFactor: DEFAULT_FOCUS_FACTOR,
@@ -224,6 +224,17 @@
         { id: 'chores-big', categoryId: 'chores', name: 'Big chore / deep clean', baseDamage: 30, type: 'repeatable', trackVisible: true, requiredForVictory: false, requiredCount: 1 }
       ],
       combos: []
+    };
+
+  const DEFAULT_STATE = {
+    version: STATE_VERSION,
+    profiles: {
+      activeId: PROFILE_IDS[0],
+      slots: PROFILE_IDS.map((id, index) => ({
+        id,
+        name: `Profile ${index + 1}`,
+        settings: deepClone(DEFAULT_SETTINGS)
+      }))
     },
     progression: {
       victoryXp: 0,
@@ -262,6 +273,11 @@
 
   const els = {
     todayLabel: document.querySelector('#todayLabel'),
+    profileSwitcher: document.querySelector('#profileSwitcher'),
+    profilesEditor: document.querySelector('#profilesEditor'),
+    removeAllCategoriesButton: document.querySelector('#removeAllCategoriesButton'),
+    removeAllActionsButton: document.querySelector('#removeAllActionsButton'),
+    removeAllCategoriesActionsButton: document.querySelector('#removeAllCategoriesActionsButton'),
     newswireViewport: document.querySelector('#newswireViewport'),
     newswireMessage: document.querySelector('#newswireMessage'),
     enemyHp: document.querySelector('#enemyHp'),
@@ -547,6 +563,32 @@
     return cleaned;
   }
 
+  function profileById(profileId, targetState = state) {
+    const slots = Array.isArray(targetState?.profiles?.slots) ? targetState.profiles.slots : [];
+    return slots.find(profile => profile.id === profileId) || null;
+  }
+
+  function activeProfile(targetState = state) {
+    const requested = profileById(targetState?.profiles?.activeId, targetState);
+    if (requested) return requested;
+    return Array.isArray(targetState?.profiles?.slots) ? (targetState.profiles.slots[0] || null) : null;
+  }
+
+  function activeSettings(targetState = state) {
+    return activeProfile(targetState)?.settings || DEFAULT_SETTINGS;
+  }
+
+  function setActiveSettings(settings, targetState = state) {
+    const profile = activeProfile(targetState);
+    if (!profile) return false;
+    profile.settings = deepClone(settings);
+    return true;
+  }
+
+  function activeProfileName(targetState = state) {
+    return activeProfile(targetState)?.name || 'Profile 1';
+  }
+
 
 
   function emptyLootState() {
@@ -721,7 +763,7 @@
     };
   }
 
-  function requiredActionsForNextFight(settings = state.settings) {
+  function requiredActionsForNextFight(settings = activeSettings()) {
     return settings.actions
       .filter(action => action.requiredForVictory)
       .map(action => ({
@@ -988,6 +1030,28 @@
     return migrated;
   }
 
+  function migrateLegacySettingsToProfiles(candidate) {
+    const migrated = deepClone(candidate);
+    const legacySettings = migrated.settings && typeof migrated.settings === 'object'
+      ? migrated.settings
+      : DEFAULT_SETTINGS;
+    migrated.version = STATE_VERSION;
+    migrated.profiles = {
+      activeId: PROFILE_IDS[0],
+      slots: PROFILE_IDS.map((id, index) => ({
+        id,
+        name: `Profile ${index + 1}`,
+        settings: deepClone(legacySettings)
+      }))
+    };
+    delete migrated.settings;
+    return migrated;
+  }
+
+  function migrateV11State(candidate) {
+    return migrateLegacySettingsToProfiles(candidate);
+  }
+
   function normalizeMetrics(value) {
     const source = value?.daily && typeof value.daily === 'object' && !Array.isArray(value.daily)
       ? value.daily
@@ -1015,29 +1079,17 @@
   }
 
 
-  function normalizeState(candidate) {
-    const sourceVersion = Number(candidate?.version);
-    const shouldGrantStarterItem = Number.isFinite(sourceVersion) && sourceVersion >= 2 && sourceVersion < 9;
-    const shouldMigrateDefaultActionDamage = Number.isFinite(sourceVersion) && sourceVersion >= 2 && sourceVersion < STATE_VERSION;
-    if (candidate?.version === 2) candidate = migrateV2State(candidate);
-    if (candidate?.version === 3) candidate = migrateV3State(candidate);
-    if (candidate?.version === 4) candidate = migrateV4State(candidate);
-    if (candidate?.version === 5) candidate = migrateV5State(candidate);
-    if (candidate?.version === 6) candidate = migrateV6State(candidate);
-    if (candidate?.version === 7) candidate = migrateV7State(candidate);
-    if (candidate?.version === 8) candidate = migrateV8State(candidate);
-    if (candidate?.version === 9) candidate = migrateV9State(candidate);
-    if (candidate?.version === 10) candidate = migrateV10State(candidate);
-    if (!candidate || candidate.version !== STATE_VERSION) return freshState();
 
-    const next = freshState();
-    next.settings.fullEnemyHp = clampInt(candidate.settings?.fullEnemyHp, 20, 1000, 100);
+  function normalizeSettings(rawSettings, shouldMigrateDefaultActionDamage = false) {
+    const source = rawSettings && typeof rawSettings === 'object' ? rawSettings : DEFAULT_SETTINGS;
+    const settings = deepClone(DEFAULT_SETTINGS);
+    settings.fullEnemyHp = clampInt(source.fullEnemyHp, 20, 1000, 100);
 
     const seen = new Set();
     const categories = [];
-    const sourceCategories = Array.isArray(candidate.settings?.categories)
-      ? candidate.settings.categories
-      : DEFAULT_STATE.settings.categories;
+    const sourceCategories = Array.isArray(source.categories)
+      ? source.categories
+      : DEFAULT_SETTINGS.categories;
     sourceCategories.forEach((category, index) => {
       const id = String(category?.id || `category-${index + 1}`);
       if (!/^[A-Za-z0-9_-]{1,64}$/.test(id) || seen.has(id) || id === UNCATEGORIZED_ID) return;
@@ -1049,11 +1101,11 @@
         color: normalizeHexColor(category?.color, fallbackCategoryColor(id, index))
       });
     });
-    next.settings.categories = ensureUncategorizedCategory(categories);
+    settings.categories = ensureUncategorizedCategory(categories);
 
-    const categoryIds = new Set(next.settings.categories.map(category => category.id));
+    const categoryIds = new Set(settings.categories.map(category => category.id));
     const regularCategoryIds = new Set(
-      next.settings.categories
+      settings.categories
         .filter(category => category.id !== UNCATEGORIZED_ID)
         .map(category => category.id)
     );
@@ -1066,34 +1118,35 @@
       .filter(category => regularCategoryIds.has(category.id) && category.focus > 1)
       .sort((a, b) => b.focus - a.focus)[0] || null;
 
-    const requestedFocusCategoryId = candidate.settings?.focusCategoryId;
-    next.settings.focusCategoryId = regularCategoryIds.has(String(requestedFocusCategoryId))
+    const requestedFocusCategoryId = source.focusCategoryId;
+    settings.focusCategoryId = regularCategoryIds.has(String(requestedFocusCategoryId))
       ? String(requestedFocusCategoryId)
       : (legacyFocused?.id || null);
-    next.settings.focusFactor = clampNumber(
-      candidate.settings?.focusFactor,
+    settings.focusFactor = clampNumber(
+      source.focusFactor,
       1,
       10,
       legacyFocused?.focus || DEFAULT_FOCUS_FACTOR
     );
-    next.settings.resistanceBuildup = clampNumber(
-      candidate.settings?.resistanceBuildup,
+    settings.resistanceBuildup = clampNumber(
+      source.resistanceBuildup,
       0,
       2,
       DEFAULT_RESISTANCE_BUILDUP
     );
-    next.settings.chillModeEnabled = candidate.settings?.chillModeEnabled === true;
-    next.settings.chillMultiplier = clampNumber(
-      candidate.settings?.chillMultiplier,
+    settings.chillModeEnabled = source.chillModeEnabled === true;
+    settings.chillMultiplier = clampNumber(
+      source.chillMultiplier,
       CHILL_MULTIPLIER_MIN,
       CHILL_MULTIPLIER_MAX,
       DEFAULT_CHILL_MULTIPLIER
     );
-    const sourceActions = Array.isArray(candidate.settings?.actions)
-      ? candidate.settings.actions
-      : DEFAULT_STATE.settings.actions;
+
+    const sourceActions = Array.isArray(source.actions)
+      ? source.actions
+      : DEFAULT_SETTINGS.actions;
     const actionIds = new Set();
-    next.settings.actions = sourceActions.slice(0, 500).map((action, index) => {
+    settings.actions = sourceActions.slice(0, 500).map((action, index) => {
       let id = String(action?.id || `action-${index + 1}`).slice(0, 128);
       if (!id || actionIds.has(id)) id = makeId('action');
       actionIds.add(id);
@@ -1119,27 +1172,10 @@
       };
     });
 
-    const normalizedActionIds = new Set(next.settings.actions.map(action => action.id));
-
-    const oneOffIds = new Set();
-    next.oneOffs = (Array.isArray(candidate.oneOffs) ? candidate.oneOffs : [])
-      .slice(0, 500)
-      .map((oneOff, index) => {
-        let id = String(oneOff?.id || `oneoff-${index + 1}`).slice(0, 128);
-        if (!id || oneOffIds.has(id)) id = makeId('oneoff');
-        oneOffIds.add(id);
-        return {
-          id,
-          categoryId: categoryIds.has(String(oneOff?.categoryId)) ? String(oneOff.categoryId) : UNCATEGORIZED_ID,
-          name: String(oneOff?.name || 'Unfinished business').slice(0, 100),
-          baseDamage: clampInt(oneOff?.baseDamage, 1, 200, 10),
-          createdAt: normalizeTimestamp(oneOff?.createdAt) || Date.now()
-        };
-      });
-
+    const normalizedActionIds = new Set(settings.actions.map(action => action.id));
     const comboIds = new Set();
     const enabledSequences = new Set();
-    next.settings.combos = (Array.isArray(candidate.settings?.combos) ? candidate.settings.combos : [])
+    settings.combos = (Array.isArray(source.combos) ? source.combos : [])
       .slice(0, 100)
       .map((combo, index) => {
         let id = String(combo?.id || `combo-${index + 1}`).slice(0, 128);
@@ -1162,6 +1198,62 @@
         };
       });
 
+    return settings;
+  }
+
+  function normalizeState(candidate) {
+    const sourceVersion = Number(candidate?.version);
+    const shouldGrantStarterItem = Number.isFinite(sourceVersion) && sourceVersion >= 2 && sourceVersion < 9;
+    const shouldMigrateDefaultActionDamage = Number.isFinite(sourceVersion) && sourceVersion >= 2 && sourceVersion < STATE_VERSION;
+    if (candidate?.version === 2) candidate = migrateV2State(candidate);
+    if (candidate?.version === 3) candidate = migrateV3State(candidate);
+    if (candidate?.version === 4) candidate = migrateV4State(candidate);
+    if (candidate?.version === 5) candidate = migrateV5State(candidate);
+    if (candidate?.version === 6) candidate = migrateV6State(candidate);
+    if (candidate?.version === 7) candidate = migrateV7State(candidate);
+    if (candidate?.version === 8) candidate = migrateV8State(candidate);
+    if (candidate?.version === 9) candidate = migrateV9State(candidate);
+    if (candidate?.version === 10) candidate = migrateV10State(candidate);
+    if (candidate?.version === 11) candidate = migrateV11State(candidate);
+    if (candidate?.version === STATE_VERSION && !candidate.profiles && candidate.settings) {
+      candidate = migrateLegacySettingsToProfiles(candidate);
+    }
+    if (!candidate || candidate.version !== STATE_VERSION) return freshState();
+
+    const next = freshState();
+    const rawSlots = Array.isArray(candidate.profiles?.slots) ? candidate.profiles.slots : [];
+    next.profiles.slots = PROFILE_IDS.map((id, index) => {
+      const sourceProfile = rawSlots.find(profile => profile?.id === id) || rawSlots[index] || null;
+      const rawName = String(sourceProfile?.name || `Profile ${index + 1}`).trim();
+      return {
+        id,
+        name: (rawName || `Profile ${index + 1}`).slice(0, PROFILE_NAME_MAX),
+        settings: normalizeSettings(sourceProfile?.settings, shouldMigrateDefaultActionDamage)
+      };
+    });
+    next.profiles.activeId = PROFILE_IDS.includes(String(candidate.profiles?.activeId))
+      ? String(candidate.profiles.activeId)
+      : PROFILE_IDS[0];
+
+    const currentSettings = activeSettings(next);
+    const categoryIds = new Set(currentSettings.categories.map(category => category.id));
+    const normalizedActionIds = new Set(currentSettings.actions.map(action => action.id));
+
+    const oneOffIds = new Set();
+    next.oneOffs = (Array.isArray(candidate.oneOffs) ? candidate.oneOffs : [])
+      .slice(0, 500)
+      .map((oneOff, index) => {
+        let id = String(oneOff?.id || `oneoff-${index + 1}`).slice(0, 128);
+        if (!id || oneOffIds.has(id)) id = makeId('oneoff');
+        oneOffIds.add(id);
+        return {
+          id,
+          categoryId: categoryIds.has(String(oneOff?.categoryId)) ? String(oneOff.categoryId) : UNCATEGORIZED_ID,
+          name: String(oneOff?.name || 'Unfinished business').slice(0, 100),
+          baseDamage: clampInt(oneOff?.baseDamage, 1, 200, 10),
+          createdAt: normalizeTimestamp(oneOff?.createdAt) || Date.now()
+        };
+      });
 
     const itemInstanceIds = new Set();
     next.inventory.items = (Array.isArray(candidate.inventory?.items) ? candidate.inventory.items : [])
@@ -1190,7 +1282,7 @@
       : '';
 
     next.metrics = normalizeMetrics(candidate.metrics);
-    next.onboarding.infoSeen = sourceVersion < STATE_VERSION
+    next.onboarding.infoSeen = sourceVersion < 11
       ? true
       : candidate.onboarding?.infoSeen === true;
     next.history = Array.isArray(candidate.history)
@@ -1200,10 +1292,10 @@
       ? String(candidate.current.date)
       : '';
     next.current.maxHp = next.current.date
-      ? clampInt(candidate.current?.maxHp, 20, 1000, getEnemyHp(next.settings))
+      ? clampInt(candidate.current?.maxHp, 20, 1000, getEnemyHp(activeSettings(next)))
       : 0;
     next.current.transactions = normalizeTransactions(candidate.current?.transactions);
-    const currentActionIds = new Set(next.settings.actions.map(action => action.id));
+    const currentActionIds = new Set(activeSettings(next).actions.map(action => action.id));
     const rawRequiredActions = Array.isArray(candidate.current?.requiredActions)
       ? candidate.current.requiredActions
       : [];
@@ -1225,14 +1317,14 @@
     next.current.loot = normalizeLootState(candidate.current?.loot);
     next.current.dayCard = normalizeDayCard(candidate.current?.dayCard);
 
-    const comboIdSet = new Set(next.settings.combos.map(combo => combo.id));
+    const comboIdSet = new Set(activeSettings(next).combos.map(combo => combo.id));
     const transactionIds = new Set(next.current.transactions.filter(tx => tx.type === 'action').map(tx => tx.id));
     const rawProgress = candidate.current?.comboProgress;
     next.current.comboProgress = {};
     if (rawProgress && typeof rawProgress === 'object') {
       Object.entries(rawProgress).forEach(([comboId, progress]) => {
         if (!comboIdSet.has(comboId)) return;
-        const combo = next.settings.combos.find(item => item.id === comboId);
+        const combo = activeSettings(next).combos.find(item => item.id === comboId);
         const sources = (Array.isArray(progress?.sourceTransactionIds) ? progress.sourceTransactionIds : [])
           .map(String)
           .filter(id => transactionIds.has(id))
@@ -1374,7 +1466,7 @@
       const raw = localStorage.getItem(storageKey);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      if (!parsed || ![2, 3, 4, 5, 6, 7, 8, 9, 10, STATE_VERSION].includes(parsed.version)) return null;
+      if (!parsed || ![2, 3, 4, 5, 6, 7, 8, 9, 10, 11, STATE_VERSION].includes(parsed.version)) return null;
       return normalizeState(parsed);
     } catch (error) {
       console.warn('Could not read cached MoLife data:', error);
@@ -1425,11 +1517,11 @@
   }
 
 
-  function getEnemyHp(settings = state.settings) {
+  function getEnemyHp(settings = activeSettings()) {
     return clampInt(settings.fullEnemyHp, 20, 1000, 100);
   }
 
-  function categoryResistanceForCount(actionCount, settings = state.settings, focusFactor = 1) {
+  function categoryResistanceForCount(actionCount, settings = activeSettings(), focusFactor = 1) {
     const index = Math.min(CATEGORY_RESISTANCE.length - 1, Math.max(0, clampInt(actionCount, 0, 100000, 0)));
     const base = CATEGORY_RESISTANCE[index];
     const buildup = clampNumber(settings.resistanceBuildup, 0, 2, DEFAULT_RESISTANCE_BUILDUP);
@@ -1438,7 +1530,7 @@
     return Math.pow(base, effectiveBuildup);
   }
 
-  function getCategoryEfficiency(categoryId, actionCount = 0, settings = state.settings) {
+  function getCategoryEfficiency(categoryId, actionCount = 0, settings = activeSettings()) {
     if (categoryId === UNCATEGORIZED_ID) {
       return { focused: false, focus: 0, resistance: 1, multiplier: UNCATEGORIZED_EFFICIENCY, tier: 0, nextResistance: null };
     }
@@ -1460,26 +1552,26 @@
 
   function toggleFocusedCategory(categoryId) {
     if (categoryId === UNCATEGORIZED_ID) return;
-    if (!state.settings.categories.some(category => category.id === categoryId)) return;
+    if (!activeSettings().categories.some(category => category.id === categoryId)) return;
 
-    state.settings.focusCategoryId = state.settings.focusCategoryId === categoryId ? null : categoryId;
+    activeSettings().focusCategoryId = activeSettings().focusCategoryId === categoryId ? null : categoryId;
     saveState();
     render();
   }
 
   function currentCategoryIdForTransaction(tx) {
-    return state.settings.categories.some(category => category.id === tx.categoryId)
+    return activeSettings().categories.some(category => category.id === tx.categoryId)
       ? tx.categoryId
       : UNCATEGORIZED_ID;
   }
 
   function getSummary() {
-    const categoryDamage = Object.fromEntries(state.settings.categories.map(category => [category.id, 0]));
-    const categoryBaseDamage = Object.fromEntries(state.settings.categories.map(category => [category.id, 0]));
-    const categoryActionCount = Object.fromEntries(state.settings.categories.map(category => [category.id, 0]));
+    const categoryDamage = Object.fromEntries(activeSettings().categories.map(category => [category.id, 0]));
+    const categoryBaseDamage = Object.fromEntries(activeSettings().categories.map(category => [category.id, 0]));
+    const categoryActionCount = Object.fromEntries(activeSettings().categories.map(category => [category.id, 0]));
     const maxHp = Math.max(20, state.current.maxHp || getEnemyHp());
     const requiredActions = (Array.isArray(state.current.requiredActions) ? state.current.requiredActions : [])
-      .filter(required => state.settings.actions.some(action => action.id === required.actionId));
+      .filter(required => activeSettings().actions.some(action => action.id === required.actionId));
     const actionCompletionCounts = new Map();
     let totalDamage = 0, totalBaseDamage = 0, comboDamage = 0, combosLanded = 0, itemDamage = 0, itemsUsed = 0;
     let itemBypassVictory = false;
@@ -1532,7 +1624,7 @@
     };
   }
 
-  function calculateDamage(action, priorActionCount = null, settings = state.settings) {
+  function calculateDamage(action, priorActionCount = null, settings = activeSettings()) {
     const baseDamage = action.baseDamage;
     const categoryId = action.categoryId;
     const summary = priorActionCount === null ? getSummary() : null;
@@ -1578,7 +1670,7 @@
         .map(tx => [tx.id, tx])
     );
 
-    state.settings.combos.forEach(combo => {
+    activeSettings().combos.forEach(combo => {
       if (!combo.enabled || combo.actionIds.length < 2) {
         delete state.current.comboProgress[combo.id];
         return;
@@ -2066,7 +2158,7 @@
   }
 
   function getDayPersonality(summary) {
-    const active = state.settings.categories
+    const active = activeSettings().categories
       .filter(category => category.id !== UNCATEGORIZED_ID)
       .map(category => ({
         ...category,
@@ -2222,12 +2314,12 @@
   function addDamage(actionId) {
     ensureToday();
 
-    const action = state.settings.actions.find(item => item.id === actionId);
+    const action = activeSettings().actions.find(item => item.id === actionId);
     if (!action) return;
     if (isOnceLimitedToday(action) && hasCompletedOnceAction(action.id)) return;
 
     const beforeSummary = getSummary();
-    const category = state.settings.categories.find(item => item.id === action.categoryId)
+    const category = activeSettings().categories.find(item => item.id === action.categoryId)
       || uncategorizedCategory();
     const reward = calculateDamage(action);
 
@@ -2286,7 +2378,7 @@
     if (!cleanName) return false;
     if (state.oneOffs.length >= 500) return false;
 
-    const validCategoryId = state.settings.categories.some(category => category.id === categoryId)
+    const validCategoryId = activeSettings().categories.some(category => category.id === categoryId)
       ? categoryId
       : UNCATEGORIZED_ID;
 
@@ -2317,7 +2409,7 @@
     if (!oneOff) return;
 
     const beforeSummary = getSummary();
-    const category = state.settings.categories.find(item => item.id === oneOff.categoryId)
+    const category = activeSettings().categories.find(item => item.id === oneOff.categoryId)
       || uncategorizedCategory();
     const reward = calculateDamage(oneOff);
 
@@ -2362,7 +2454,7 @@
     if (!target) return;
 
     if (target.oneOff && !state.oneOffs.some(item => item.id === target.actionId)) {
-      const categoryId = state.settings.categories.some(category => category.id === target.categoryId)
+      const categoryId = activeSettings().categories.some(category => category.id === target.categoryId)
         ? target.categoryId
         : UNCATEGORIZED_ID;
       state.oneOffs.push({
@@ -2411,7 +2503,7 @@
 
 
   function getDominantCategory(summary) {
-    return state.settings.categories
+    return activeSettings().categories
       .filter(category => category.id !== UNCATEGORIZED_ID)
       .map(category => ({
         ...category,
@@ -2652,6 +2744,7 @@
     ensureToday();
     const summary = getSummary();
 
+    renderProfileSwitcher();
     renderHero(summary);
     renderMoodTracker();
     renderProgression();
@@ -2868,12 +2961,12 @@
     }
     if (els.chillBadge) {
       const chillMultiplier = clampNumber(
-        state.settings.chillMultiplier,
+        activeSettings().chillMultiplier,
         CHILL_MULTIPLIER_MIN,
         CHILL_MULTIPLIER_MAX,
         DEFAULT_CHILL_MULTIPLIER
       );
-      els.chillBadge.hidden = state.settings.chillModeEnabled !== true;
+      els.chillBadge.hidden = activeSettings().chillModeEnabled !== true;
       els.chillBadge.textContent = `CHILL MODE ×${Number(chillMultiplier.toFixed(2)).toString()}`;
     }
     if (els.tenaciousStatus) {
@@ -3126,9 +3219,9 @@
     });
     els.categoriesGrid.replaceChildren();
 
-    const visibleCategories = state.settings.categories.filter(category => {
+    const visibleCategories = activeSettings().categories.filter(category => {
       if (category.id !== UNCATEGORIZED_ID) return true;
-      const hasActions = state.settings.actions.some(action => action.categoryId === UNCATEGORIZED_ID && action.trackVisible !== false);
+      const hasActions = activeSettings().actions.some(action => action.categoryId === UNCATEGORIZED_ID && action.trackVisible !== false);
       const hasOneOffs = state.oneOffs.some(oneOff => oneOff.categoryId === UNCATEGORIZED_ID);
       const hasDamage = (summary.categoryBaseDamage[UNCATEGORIZED_ID] || 0) > 0;
       return hasActions || hasOneOffs || hasDamage;
@@ -3175,7 +3268,7 @@
       } else {
         const overallPercent = Math.round(efficiency.multiplier * 100);
         const resistancePercent = Math.round(efficiency.resistance * 100);
-        const focusFactor = clampNumber(state.settings.focusFactor, 1, 10, DEFAULT_FOCUS_FACTOR);
+        const focusFactor = clampNumber(activeSettings().focusFactor, 1, 10, DEFAULT_FOCUS_FACTOR);
         focusToggle.hidden = false;
         focusToggle.classList.toggle('is-active', efficiency.focused);
         focusToggle.setAttribute('aria-pressed', efficiency.focused ? 'true' : 'false');
@@ -3195,13 +3288,13 @@
           : `${efficiency.focused ? 'Focused resistance' : 'Category resistance'} ${resistancePercent}% · next action drops to ${Math.round(efficiency.nextResistance * 100)}%`;
       }
 
-      const originalOrder = new Map(state.settings.actions.map((action, actionIndex) => [action.id, actionIndex]));
+      const originalOrder = new Map(activeSettings().actions.map((action, actionIndex) => [action.id, actionIndex]));
       const requirementRank = action => {
         const progress = summary.requiredProgress[action.id];
         if (!progress) return 2;
         return progress.remainingCount > 0 ? 0 : 1;
       };
-      const actions = state.settings.actions
+      const actions = activeSettings().actions
         .filter(action => action.categoryId === category.id && action.trackVisible !== false)
         .sort((a, b) => requirementRank(a) - requirementRank(b)
           || (originalOrder.get(a.id) ?? 0) - (originalOrder.get(b.id) ?? 0));
@@ -3213,7 +3306,7 @@
       if (!actions.length && !oneOffs.length) {
         const empty = document.createElement('div');
         empty.className = 'empty-state';
-        const hasHiddenActions = state.settings.actions.some(action => action.categoryId === category.id && action.trackVisible === false);
+        const hasHiddenActions = activeSettings().actions.some(action => action.categoryId === category.id && action.trackVisible === false);
         empty.textContent = category.id === UNCATEGORIZED_ID
           ? 'Deleted-category actions and unfinished business can land here.'
           : hasHiddenActions ? 'No visible attacks. Unhide one in Settings or add a One-off.' : 'No attacks yet. Add a One-off or configure an Action.';
@@ -3375,7 +3468,7 @@
     if (!els.combosPanel) return;
     els.combosPanel.replaceChildren();
 
-    const combos = state.settings.combos;
+    const combos = activeSettings().combos;
     els.combosPanel.hidden = combos.length === 0;
     if (!combos.length) return;
 
@@ -3414,7 +3507,7 @@
         const steps = document.createElement('div');
         steps.className = 'combo-steps';
         combo.actionIds.forEach((actionId, index) => {
-          const action = state.settings.actions.find(item => item.id === actionId);
+          const action = activeSettings().actions.find(item => item.id === actionId);
           const row = document.createElement('div');
           row.className = 'combo-step';
           const mark = document.createElement('span');
@@ -3594,8 +3687,186 @@
   }
 
 
+  function reconcileSharedStateWithActiveSettings() {
+    const settings = activeSettings();
+    state.current.comboProgress = {};
+
+    const categoryIds = new Set(settings.categories.map(category => category.id));
+    state.oneOffs = state.oneOffs.map(oneOff => ({
+      ...oneOff,
+      categoryId: categoryIds.has(oneOff.categoryId) ? oneOff.categoryId : UNCATEGORIZED_ID
+    }));
+
+    const actionIds = new Set(settings.actions.map(action => action.id));
+    state.current.requiredActions = (state.current.requiredActions || [])
+      .filter(required => actionIds.has(required.actionId));
+
+    finalizeVictoryIfNeeded();
+  }
+
+  function renderProfileSwitcher() {
+    if (!els.profileSwitcher) return;
+    els.profileSwitcher.replaceChildren();
+
+    state.profiles.slots.forEach((profile, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'profile-switch-button';
+      button.dataset.profileId = profile.id;
+      button.classList.toggle('is-active', profile.id === state.profiles.activeId);
+      button.setAttribute('aria-pressed', profile.id === state.profiles.activeId ? 'true' : 'false');
+      button.title = `Switch to ${profile.name}`;
+
+      const number = document.createElement('span');
+      number.className = 'profile-switch-number';
+      number.textContent = String(index + 1);
+      const name = document.createElement('span');
+      name.className = 'profile-switch-name';
+      name.textContent = profile.name;
+      button.append(number, name);
+
+      button.addEventListener('click', () => switchProfile(profile.id));
+      els.profileSwitcher.append(button);
+    });
+  }
+
+  function switchProfile(profileId) {
+    if (!PROFILE_IDS.includes(profileId) || profileId === state.profiles.activeId) return;
+
+    if (settingsDraft && !commitSettingsDraft({ announce: false })) {
+      return;
+    }
+
+    state.profiles.activeId = profileId;
+    settingsDraft = null;
+    reconcileSharedStateWithActiveSettings();
+    saveState();
+    render();
+  }
+
+  function renderProfilesEditor() {
+    if (!els.profilesEditor) return;
+    els.profilesEditor.replaceChildren();
+
+    state.profiles.slots.forEach((profile, index) => {
+      const row = document.createElement('div');
+      row.className = `profile-editor-row${profile.id === state.profiles.activeId ? ' is-active' : ''}`;
+
+      const identity = document.createElement('div');
+      identity.className = 'profile-editor-identity';
+      const badge = document.createElement('strong');
+      badge.textContent = `PROFILE ${index + 1}`;
+      const status = document.createElement('span');
+      status.textContent = profile.id === state.profiles.activeId ? 'ACTIVE' : 'AVAILABLE';
+      identity.append(badge, status);
+
+      const nameLabel = document.createElement('label');
+      nameLabel.className = 'profile-name-field';
+      const nameTitle = document.createElement('span');
+      nameTitle.textContent = 'Name';
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.maxLength = PROFILE_NAME_MAX;
+      nameInput.value = profile.name;
+      nameInput.addEventListener('change', () => {
+        const fallback = `Profile ${index + 1}`;
+        profile.name = (nameInput.value.trim() || fallback).slice(0, PROFILE_NAME_MAX);
+        nameInput.value = profile.name;
+        saveState();
+        renderProfileSwitcher();
+        renderProfilesEditor();
+        if (els.templateName && profile.id === state.profiles.activeId) {
+          els.templateName.value = profile.name;
+        }
+      });
+      nameLabel.append(nameTitle, nameInput);
+
+      const actions = document.createElement('div');
+      actions.className = 'profile-editor-actions';
+
+      if (profile.id === state.profiles.activeId) {
+        const active = document.createElement('span');
+        active.className = 'profile-active-label';
+        active.textContent = 'Current profile';
+        actions.append(active);
+      } else {
+        const switchButton = document.createElement('button');
+        switchButton.type = 'button';
+        switchButton.className = 'secondary-button';
+        switchButton.textContent = 'Switch';
+        switchButton.addEventListener('click', () => {
+          if (settingsDraft && !commitSettingsDraft({ announce: false })) return;
+          state.profiles.activeId = profile.id;
+          reconcileSharedStateWithActiveSettings();
+          saveState();
+          settingsDraft = deepClone(activeSettings());
+          openSettings();
+          render();
+        });
+
+        const copyButton = document.createElement('button');
+        copyButton.type = 'button';
+        copyButton.className = 'secondary-button';
+        copyButton.textContent = 'Copy active setup here';
+        copyButton.addEventListener('click', () => {
+          if (settingsDraft && !commitSettingsDraft({ announce: false })) return;
+          if (!window.confirm(`Replace ${profile.name} with an exact copy of ${activeProfileName()}?\n\nOnly that profile's template-equivalent settings will be replaced.`)) return;
+          profile.settings = deepClone(activeSettings());
+          saveState();
+          renderProfilesEditor();
+          els.settingsMessage.textContent = `${profile.name} now contains an exact copy of ${activeProfileName()}.`;
+        });
+
+        actions.append(switchButton, copyButton);
+      }
+
+      row.append(identity, nameLabel, actions);
+      els.profilesEditor.append(row);
+    });
+  }
+
+  function clearActiveProfileConfiguration(mode) {
+    if (!settingsDraft) return;
+
+    const profileName = activeProfileName();
+    const messages = {
+      categories: `Remove all user categories from ${profileName}?\n\nActions and One-offs will be moved to Uncategorized. Actions and combos remain.`,
+      actions: `Remove all Actions from ${profileName}?\n\nCategories remain. Combos will also be removed because they depend on Actions.`,
+      all: `Remove all categories and Actions from ${profileName}?\n\nOnly Uncategorized will remain, Actions and combos will be cleared, and One-offs will fall back to Uncategorized.`
+    };
+    if (!window.confirm(messages[mode] || messages.all)) return;
+
+    if (mode === 'categories' || mode === 'all') {
+      settingsDraft.categories = [uncategorizedCategory()];
+      settingsDraft.focusCategoryId = null;
+      settingsDraft.actions = settingsDraft.actions.map(action => ({
+        ...action,
+        categoryId: UNCATEGORIZED_ID
+      }));
+    }
+
+    if (mode === 'actions' || mode === 'all') {
+      settingsDraft.actions = [];
+      settingsDraft.combos = [];
+    }
+
+    renderCategoriesEditor();
+    renderActionsEditor();
+    renderCombosEditor();
+    populateCategorySelect();
+
+    if (commitSettingsDraft({ announce: false })) {
+      const labels = {
+        categories: 'All user categories removed. Actions moved to Uncategorized.',
+        actions: 'All Actions and dependent combos removed.',
+        all: 'All user categories, Actions and combos removed.'
+      };
+      els.settingsMessage.textContent = labels[mode] || labels.all;
+    }
+  }
+
   function openSettings() {
-    settingsDraft = deepClone(state.settings);
+    settingsDraft = deepClone(activeSettings());
     settingsDraft.categories = ensureUncategorizedCategory(settingsDraft.categories);
     settingsDraft.combos = Array.isArray(settingsDraft.combos) ? settingsDraft.combos : [];
     els.goalInput.value = settingsDraft.fullEnemyHp;
@@ -3609,7 +3880,9 @@
       DEFAULT_CHILL_MULTIPLIER
     );
     syncChillSettingsControls();
-    els.settingsMessage.textContent = 'Changes save automatically. Enemy HP and Required-for-victory changes apply to the next daily fight.';
+    renderProfilesEditor();
+    if (els.templateName) els.templateName.value = activeProfileName();
+    els.settingsMessage.textContent = `Changes save automatically to ${activeProfileName()}. Enemy HP and Required-for-victory changes apply to the next daily fight.`;
     if (els.newCategoryColor) {
       const customCount = settingsDraft.categories.filter(
         category => category.id !== UNCATEGORIZED_ID && !DEFAULT_CATEGORY_COLORS[category.id]
@@ -4526,29 +4799,29 @@
       return false;
     }
 
-    const previousCombos = new Map(state.settings.combos.map(combo => [combo.id, combo]));
-    state.settings = result.settings;
+    const previousCombos = new Map(activeSettings().combos.map(combo => [combo.id, combo]));
+    setActiveSettings(result.settings);
 
-    const nextCategoryIds = new Set(state.settings.categories.map(category => category.id));
+    const nextCategoryIds = new Set(activeSettings().categories.map(category => category.id));
     state.oneOffs = state.oneOffs.map(oneOff => ({
       ...oneOff,
       categoryId: nextCategoryIds.has(oneOff.categoryId) ? oneOff.categoryId : UNCATEGORIZED_ID
     }));
 
-    const nextActionIds = new Set(state.settings.actions.map(action => action.id));
+    const nextActionIds = new Set(activeSettings().actions.map(action => action.id));
     state.current.requiredActions = (state.current.requiredActions || [])
       .filter(required => nextActionIds.has(required.actionId));
 
-    const nextComboIds = new Set(state.settings.combos.map(combo => combo.id));
+    const nextComboIds = new Set(activeSettings().combos.map(combo => combo.id));
     Object.keys(state.current.comboProgress).forEach(comboId => {
-      const nextCombo = state.settings.combos.find(combo => combo.id === comboId);
+      const nextCombo = activeSettings().combos.find(combo => combo.id === comboId);
       const previousCombo = previousCombos.get(comboId);
       if (!nextComboIds.has(comboId) || comboChanged(previousCombo, nextCombo)) {
         delete state.current.comboProgress[comboId];
       }
     });
 
-    state.settings.combos.forEach(combo => {
+    activeSettings().combos.forEach(combo => {
       const previousCombo = previousCombos.get(combo.id);
       if (comboChanged(previousCombo, combo)) {
         state.current.comboProgress[combo.id] = { index: 0, sourceTransactionIds: [] };
@@ -4632,13 +4905,12 @@
     }
 
     const sourceStateVersion = templateSourceStateVersion(payload);
-    const candidate = freshState();
-    candidate.settings = migrateImportedTemplateSettings(raw, sourceStateVersion);
-    return normalizeState(candidate).settings;
+    const migratedSettings = migrateImportedTemplateSettings(raw, sourceStateVersion);
+    return normalizeSettings(migratedSettings, sourceStateVersion < STATE_VERSION);
   }
 
   function exportSettingsTemplate() {
-    let settings = state.settings;
+    let settings = activeSettings();
 
     if (settingsDraft) {
       const result = buildSettingsFromDraft();
@@ -4663,7 +4935,7 @@
     window.setTimeout(() => URL.revokeObjectURL(href), 1000);
 
     if (els.templateStatus) {
-      els.templateStatus.textContent = 'Template exported. One-offs, progression, fight/mood history, current-fight data, Pawnshop inventory and onboarding state were intentionally excluded.';
+      els.templateStatus.textContent = `${activeProfileName()} exported. One-offs, progression, fight/mood history, current-fight data, Pawnshop inventory and onboarding state were intentionally excluded.`;
     }
   }
 
@@ -4682,14 +4954,14 @@
       if (!confirmed) return;
 
       settingsDraft = deepClone(importedSettings);
-      state.settings = deepClone(importedSettings);
+      setActiveSettings(importedSettings);
       state.current.comboProgress = {};
-      const importedCategoryIds = new Set(state.settings.categories.map(category => category.id));
+      const importedCategoryIds = new Set(activeSettings().categories.map(category => category.id));
       state.oneOffs = state.oneOffs.map(oneOff => ({
         ...oneOff,
         categoryId: importedCategoryIds.has(oneOff.categoryId) ? oneOff.categoryId : UNCATEGORIZED_ID
       }));
-      const importedActionIds = new Set(state.settings.actions.map(action => action.id));
+      const importedActionIds = new Set(activeSettings().actions.map(action => action.id));
       state.current.requiredActions = (state.current.requiredActions || [])
         .filter(required => importedActionIds.has(required.actionId));
       finalizeVictoryIfNeeded();
@@ -4709,7 +4981,7 @@
       populateCategorySelect();
       render();
 
-      els.settingsMessage.textContent = 'Template imported and activated.';
+      els.settingsMessage.textContent = `Template imported into ${activeProfileName()} and activated.`;
       if (els.templateStatus) {
         els.templateStatus.textContent = `${legacyTemplate ? 'Legacy template upgraded · ' : ''}${importedName ? importedName + ' · ' : ''}${settingsDraft.categories.length - 1} categories · ${settingsDraft.actions.length} actions · ${settingsDraft.combos.length} combos`;
       }
@@ -4746,7 +5018,7 @@
 
   function resetGameData() {
     const confirmed = window.confirm(
-      'Reset ALL MoLife game data?\n\nThis wipes categories, actions, One-offs, combos, Pawnshop items, mood history, fight history, Level, Street Cred and streaks. Your login/account remains.\n\nThe Crestfallen Department of Records will pretend none of this ever happened.'
+      'Reset ALL MoLife game data?\n\nThis wipes all three profiles, categories, actions, One-offs, combos, Pawnshop items, mood history, fight history, Level, Street Cred and streaks. Your login/account remains.\n\nThe Crestfallen Department of Records will pretend none of this ever happened.'
     );
     if (!confirmed) return;
 
@@ -4804,6 +5076,7 @@
     stateVersion: STATE_VERSION,
     getState: () => deepClone(state),
     getDefaultState: () => freshState(),
+    getActiveProfileId: () => state.profiles.activeId,
     getStorageKey: () => activeStorageKey,
     readStoredState,
     replaceState,
@@ -4893,6 +5166,9 @@
     closePawnshopItemDialog();
     usePawnshopItem(itemInstanceId);
   });
+  els.removeAllCategoriesButton?.addEventListener('click', () => clearActiveProfileConfiguration('categories'));
+  els.removeAllActionsButton?.addEventListener('click', () => clearActiveProfileConfiguration('actions'));
+  els.removeAllCategoriesActionsButton?.addEventListener('click', () => clearActiveProfileConfiguration('all'));
   els.exportTemplateButton?.addEventListener('click', exportSettingsTemplate);
   els.importTemplateButton?.addEventListener('click', () => els.importTemplateInput?.click());
   els.importTemplateInput?.addEventListener('change', () => {
