@@ -448,6 +448,18 @@ Verified non-owner accounts can now delete themselves from the Account dialog. D
 
 No SQL migration is required. The bounded state/API request ceiling is raised from **256 KiB to 512 KiB** to provide headroom for three legal profile payloads; server validation still enforces the same per-profile settings limits.
 
+## v4.25 — Office of Optional Selves
+
+Profiles are now managed **only inside Settings**; the main MoLife screen no longer shows a profile selector.
+
+Fresh/local/new-account state starts with exactly **one profile named Default**. Users can add and remove profiles in Settings, with a minimum of 1 and a hard maximum of **5**. Adding a profile creates an exact copy of the currently active profile's template-equivalent settings and activates the new profile immediately, making it safe to branch an existing setup without rebuilding categories, Actions or combos. Profiles can still be renamed, switched, and overwritten from the active setup.
+
+Removing a profile deletes only that profile's configuration. Shared progression, today's fight, One-offs, Mood/history, Pawnshop inventory, onboarding and account identity remain untouched. The final remaining profile cannot be removed. If the active profile is removed, MoLife activates a surviving profile and reconciles transient combo/Required-for-victory state against it.
+
+State schema is now **v13**. Existing v12 users keep all of their existing profiles; the migration does not collapse the previous three slots. Older pre-profile state migrates to a single Default profile. Profile IDs are now stable opaque identifiers rather than fixed slot names, allowing add/remove without renumbering.
+
+Profiles and Settings Templates remain deliberately tied to the **same settings payload and normalization path**. No SQL migration is required. The bounded API request ceiling increases from **512 KiB to 1 MiB** to provide headroom for up to five valid profile payloads.
+
 ## Self-hosting
 
 See [DEPLOY.md](DEPLOY.md) for the provider-neutral self-hosting guide.
