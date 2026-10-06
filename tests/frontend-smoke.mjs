@@ -13,6 +13,7 @@ const app = read('app.js');
 const cloud = read('cloud.js');
 const metrics = read('metrics-viewer.js');
 const serviceWorker = read('service-worker.js');
+const manifest = read('manifest.webmanifest');
 const deleteAccountApi = read('api/delete-account.php');
 const cssFiles = [
   'styles.css',
@@ -248,7 +249,7 @@ if (!html.includes('Actions (type, damage, order, visibility and Required counts
     || !html.includes('id="removeAllCategoriesButton"')
     || !html.includes('id="removeAllActionsButton"')
     || !html.includes('id="removeAllCategoriesActionsButton"')) {
-  fail('v4.25 settings-only profile/template/cleanup UI contract is incomplete');
+  fail('v4.26 settings-only profile/template/cleanup UI contract is incomplete');
 }
 
 if (app.includes('profileSwitcher')
@@ -286,6 +287,10 @@ if (!deleteAccountApi.includes("password_verify($password")
     || !deleteAccountApi.includes('dalli_require_csrf()')
     || !deleteAccountApi.includes('dalli_clear_remember_cookie()')) {
   fail('Account deletion endpoint is missing required re-authentication or session safeguards');
+}
+
+if (/questionable|suspiciously/i.test(html) || /suspiciously/i.test(manifest)) {
+  fail('Retired user-facing questionable/suspiciously copy returned');
 }
 
 const mainCss = read('styles.css');
