@@ -2233,7 +2233,7 @@
     const category = personality.dominant.name;
     const pools = {
       item: [
-        ['PAWNSHOP MERCHANDISE RESOLVES INTERNAL DISPUTE', `${summary.itemsUsed} questionable item${summary.itemsUsed === 1 ? '' : 's'} used. Officials confirm this still counts as personal development.`],
+        ['PAWNSHOP MERCHANDISE RESOLVES INTERNAL DISPUTE', `${summary.itemsUsed} dubious item${summary.itemsUsed === 1 ? '' : 's'} used. Officials confirm this still counts as personal development.`],
         ['CITIZEN SKIPS PERSONAL GROWTH, REACHES FOR PHAT ED’S STOCK', 'The Dark Doppelgänger was unavailable for comment after a brief illumination-related incident.'],
         ['DUBIOUS PROCUREMENT ENDS DAILY HOSTILITIES', 'Authorities stress that the item was earned through previous good behavior, which somehow makes this worse.']
       ],
