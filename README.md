@@ -468,6 +468,14 @@ Repeated human-facing uses of **questionable** and **suspiciously** have been re
 
 State schema remains **v13** and no SQL migration is required.
 
+## v4.26.1 — Department of Vertical Integration
+
+Fixes the Profiles section on narrow/mobile screens. The section header now actually stacks its explanatory copy above the **Add profile** button instead of leaving the desktop flex row active, which previously squeezed the copy into a thin column and stretched the button to the height of the text.
+
+Profile cards also get slightly tighter mobile-only spacing so the section remains readable without wasting vertical space. No profile behavior, settings data, sync behavior or schema changes.
+
+State schema remains **v13** and no SQL migration is required.
+
 ## Self-hosting
 
 See [DEPLOY.md](DEPLOY.md) for the provider-neutral self-hosting guide.
