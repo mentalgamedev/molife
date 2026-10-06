@@ -1210,7 +1210,7 @@
   function normalizeState(candidate) {
     const sourceVersion = Number(candidate?.version);
     const shouldGrantStarterItem = Number.isFinite(sourceVersion) && sourceVersion >= 2 && sourceVersion < 9;
-    const shouldMigrateDefaultActionDamage = Number.isFinite(sourceVersion) && sourceVersion >= 2 && sourceVersion < STATE_VERSION;
+    const shouldMigrateDefaultActionDamage = Number.isFinite(sourceVersion) && sourceVersion >= 2 && sourceVersion < 11;
     if (candidate?.version === 2) candidate = migrateV2State(candidate);
     if (candidate?.version === 3) candidate = migrateV3State(candidate);
     if (candidate?.version === 4) candidate = migrateV4State(candidate);
@@ -4901,7 +4901,7 @@
 
     const sourceStateVersion = templateSourceStateVersion(payload);
     const migratedSettings = migrateImportedTemplateSettings(raw, sourceStateVersion);
-    return normalizeSettings(migratedSettings, sourceStateVersion < STATE_VERSION);
+    return normalizeSettings(migratedSettings, sourceStateVersion < 11);
   }
 
   function exportSettingsTemplate() {
