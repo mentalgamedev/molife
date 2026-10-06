@@ -197,11 +197,12 @@ if (app.includes('state.settings')) {
 
 if (!app.includes('function normalizeSettings(')
     || !app.includes('settings: normalizeSettings(sourceProfile?.settings, shouldMigrateDefaultActionDamage)')
-    || !app.includes('return normalizeSettings(migratedSettings, sourceStateVersion < STATE_VERSION);')) {
+    || !app.includes('return normalizeSettings(migratedSettings, sourceStateVersion < 11);')) {
   fail('Profiles and templates must share the same settings normalization path');
 }
 
-if (!app.includes('function migrateV11State(candidate)')
+if (!app.includes('sourceVersion >= 2 && sourceVersion < 11')
+    || !app.includes('function migrateV11State(candidate)')
     || !app.includes('slots: PROFILE_IDS.map((id, index) => ({')
     || !app.includes('settings: deepClone(legacySettings)')) {
   fail('v11-to-v12 three-profile migration is incomplete');
