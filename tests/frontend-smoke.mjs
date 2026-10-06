@@ -182,17 +182,18 @@ if (!app.includes('baseDamage === damageMigration[0]')) {
   fail('Default-damage migration must only touch actions that still have their stock damage');
 }
 
-if (!app.includes('const STATE_VERSION = 12;')
-    || !app.includes("const PROFILE_IDS = Object.freeze(['profile-1', 'profile-2', 'profile-3']);")
-    || !app.includes('profiles: {')
-    || !app.includes('activeId: PROFILE_IDS[0]')
+if (!app.includes('const STATE_VERSION = 13;')
+    || !app.includes("const DEFAULT_PROFILE_ID = 'profile-default';")
+    || !app.includes('const PROFILE_MIN = 1;')
+    || !app.includes('const PROFILE_MAX = 5;')
+    || !app.includes("name: 'Default'")
     || !app.includes('onboarding: {')
     || !app.includes('infoSeen: false')) {
-  fail('v12 profile/onboarding defaults are incomplete');
+  fail('v13 dynamic-profile defaults are incomplete');
 }
 
 if (app.includes('state.settings')) {
-  fail('v12 must not keep a second persistent state.settings source beside profile settings');
+  fail('v13 must not keep a second persistent state.settings source beside profile settings');
 }
 
 if (!app.includes('function normalizeSettings(')
@@ -203,9 +204,11 @@ if (!app.includes('function normalizeSettings(')
 
 if (!app.includes('sourceVersion >= 2 && sourceVersion < 11')
     || !app.includes('function migrateV11State(candidate)')
-    || !app.includes('slots: PROFILE_IDS.map((id, index) => ({')
+    || !app.includes('function migrateV12State(candidate)')
+    || !app.includes('slice(0, PROFILE_MAX)')
+    || !app.includes("activeId: DEFAULT_PROFILE_ID")
     || !app.includes('settings: deepClone(legacySettings)')) {
-  fail('v11-to-v12 three-profile migration is incomplete');
+  fail('v11/v12-to-v13 profile migration is incomplete');
 }
 
 if (!app.includes('const LEGACY_TEMPLATE_VERSION = 1;')
@@ -239,12 +242,22 @@ if (missingTemplateSettings.length) {
 }
 if (!html.includes('Actions (type, damage, order, visibility and Required counts)')
     || !html.includes('onboarding state')
-    || !html.includes('id="profileSwitcher"')
     || !html.includes('id="profilesEditor"')
+    || !html.includes('id="addProfileButton"')
+    || html.includes('id="profileSwitcher"')
     || !html.includes('id="removeAllCategoriesButton"')
     || !html.includes('id="removeAllActionsButton"')
     || !html.includes('id="removeAllCategoriesActionsButton"')) {
-  fail('v4.24 profile/template/cleanup UI contract is incomplete');
+  fail('v4.25 settings-only profile/template/cleanup UI contract is incomplete');
+}
+
+if (app.includes('profileSwitcher')
+    || !app.includes('function addProfile()')
+    || !app.includes('function removeProfile(profileId)')
+    || !app.includes('state.profiles.slots.length >= PROFILE_MAX')
+    || !app.includes('state.profiles.slots.length <= PROFILE_MIN')
+    || !app.includes("settings: deepClone(activeSettings())")) {
+  fail('Dynamic profile add/remove behavior is incomplete');
 }
 
 if (!app.includes("clearActiveProfileConfiguration('categories')")
@@ -276,6 +289,9 @@ if (!deleteAccountApi.includes("password_verify($password")
 }
 
 const mainCss = read('styles.css');
+if (mainCss.includes('.profile-switcher') || mainCss.includes('.profile-switch-button')) {
+  fail('Main-screen profile switcher styles should be removed');
+}
 const returnedLegacy = retiredSelectors.filter(selector => mainCss.includes(selector));
 if (returnedLegacy.length) {
   fail(`Retired CSS selectors returned: ${returnedLegacy.join(', ')}`);
