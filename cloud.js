@@ -589,6 +589,43 @@
   refreshSecurityButton.type = 'button';
   securitySection.append(securityHeading, securityHelp, securityStatus, refreshSecurityButton);
 
+  const deleteAccountSection = makeElement('section', 'invite-section delete-account-section');
+  const deleteAccountHeading = makeElement('h3', '', 'Delete account');
+  const deleteAccountHelp = makeElement(
+    'p',
+    'muted',
+    'Permanently deletes this cloud account, synced MoLife state, remembered sessions and activation/auth tokens. Local-only guest data on this browser is separate.'
+  );
+  const deleteAccountOwnerNotice = makeElement(
+    'p',
+    'login-message',
+    'The owner account cannot be deleted here. Ownership transfer must exist before the primary account can be removed safely.'
+  );
+  deleteAccountOwnerNotice.dataset.kind = 'warning';
+
+  const deletePasswordInput = document.createElement('input');
+  deletePasswordInput.type = 'password';
+  deletePasswordInput.maxLength = 200;
+  deletePasswordInput.autocomplete = 'current-password';
+  const deletePasswordField = makeField('Current password', deletePasswordInput);
+
+  const deleteUsernameInput = document.createElement('input');
+  deleteUsernameInput.type = 'text';
+  deleteUsernameInput.maxLength = 64;
+  deleteUsernameInput.autocomplete = 'off';
+  const deleteUsernameField = makeField('Type your username to confirm', deleteUsernameInput);
+
+  const deleteAccountControls = makeElement('div', 'delete-account-controls');
+  const deleteAccountButton = makeElement('button', 'danger-button', 'Delete account permanently');
+  deleteAccountButton.type = 'button';
+  deleteAccountControls.append(deletePasswordField, deleteUsernameField, deleteAccountButton);
+  deleteAccountSection.append(
+    deleteAccountHeading,
+    deleteAccountHelp,
+    deleteAccountOwnerNotice,
+    deleteAccountControls
+  );
+
   const accountMessage = makeElement('div', 'login-message');
   accountMessage.setAttribute('role', 'status');
   accountMessage.setAttribute('aria-live', 'polite');
@@ -606,6 +643,7 @@
     inviteSection,
     mailTestSection,
     securitySection,
+    deleteAccountSection,
     accountMessage,
     accountButtons
   );
@@ -730,7 +768,12 @@
     securitySection.hidden = !user.isOwner;
     generatedInvite.hidden = true;
     accountMessage.textContent = '';
+    accountMessage.dataset.kind = '';
     mailTestMessage.textContent = '';
+    deletePasswordInput.value = '';
+    deleteUsernameInput.value = '';
+    deleteAccountOwnerNotice.hidden = !user.isOwner;
+    deleteAccountControls.hidden = user.isOwner;
     mailTestMessage.dataset.kind = '';
     if (user.isOwner && !mailTestInput.value && user.email) {
       mailTestInput.value = user.email;
@@ -868,6 +911,75 @@
     accountDialog.close();
   }
 
+  async function deleteAccount() {
+    if (!user || user.isOwner) return;
+
+    const password = deletePasswordInput.value;
+    const confirmation = deleteUsernameInput.value.trim();
+    if (!password) {
+      accountMessage.dataset.kind = 'error';
+      accountMessage.textContent = 'Enter your current password.';
+      deletePasswordInput.focus();
+      return;
+    }
+    if (confirmation !== user.username) {
+      accountMessage.dataset.kind = 'error';
+      accountMessage.textContent = `Type “${user.username}” exactly to confirm deletion.`;
+      deleteUsernameInput.focus();
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Permanently delete the MoLife account “${user.username}”?\n\nThis removes the account and all synced MoLife data. This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    const deletedUserId = user.id;
+    deleteAccountButton.disabled = true;
+    accountMessage.dataset.kind = '';
+    accountMessage.textContent = 'Deleting account…';
+
+    try {
+      await flushSave();
+      await apiRequest('delete-account.php', {
+        method: 'POST',
+        headers: { 'X-CSRF-Token': csrfToken },
+        body: JSON.stringify({
+          password,
+          confirmation
+        })
+      });
+
+      clearTimeout(saveTimer);
+      clearTimeout(retryTimer);
+      queuedState = null;
+      saving = false;
+      conflict = false;
+      cloudReady = false;
+      revision = 0;
+      csrfToken = '';
+      user = null;
+
+      try {
+        localStorage.removeItem(userStorageKey(deletedUserId));
+      } catch (error) {
+        console.warn('Could not remove deleted account cache:', error);
+      }
+
+      window.DalliApp.useStorageKey(window.DalliApp.guestStorageKey);
+      setSignedOutUi();
+      accountDialog.close();
+    } catch (error) {
+      accountMessage.dataset.kind = 'error';
+      accountMessage.textContent = error instanceof ApiError
+        ? error.message
+        : 'Could not delete this account.';
+    } finally {
+      deleteAccountButton.disabled = false;
+      deletePasswordInput.value = '';
+    }
+  }
+
   createInviteButton.addEventListener('click', async () => {
     if (!user?.isOwner) return;
 
@@ -955,9 +1067,9 @@
     const hasItems = Array.isArray(candidate.inventory?.items)
       && candidate.inventory.items.some(item => item?.id !== STARTER_ITEM_INSTANCE_ID);
     const hasOneOffs = Array.isArray(candidate.oneOffs) && candidate.oneOffs.length > 0;
-    const customizedSettings = JSON.stringify(candidate.settings) !== JSON.stringify(fresh.settings);
+    const customizedProfiles = JSON.stringify(candidate.profiles) !== JSON.stringify(fresh.profiles);
 
-    return hasTransactions || hasHistory || hasItems || hasOneOffs || customizedSettings;
+    return hasTransactions || hasHistory || hasItems || hasOneOffs || customizedProfiles;
   }
 
   async function activateSession(session, options = {}) {
@@ -1157,6 +1269,7 @@
   resendVerificationButton.addEventListener('click', resendVerification);
   accountCloseButton.addEventListener('click', () => accountDialog.close());
   signOutButton.addEventListener('click', signOut);
+  deleteAccountButton.addEventListener('click', deleteAccount);
 
   authForm.addEventListener('submit', event => {
     event.preventDefault();
