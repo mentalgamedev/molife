@@ -135,6 +135,50 @@ test_assert(($validatedV11['onboarding']['infoSeen'] ?? null) === true, 'v11 sho
 test_assert(($validatedV11['settings']['chillMultiplier'] ?? null) === 2.0, 'v11 should preserve v10 combat tuning');
 test_assert(($validatedV11['metrics']['daily']['2026-01-01']['mood'] ?? null) === -35, 'v11 should preserve mood metrics');
 
+$v12PrimarySettings = $v11State['settings'];
+$v12MinimalSettings = $v12PrimarySettings;
+$v12MinimalSettings['focusCategoryId'] = null;
+$v12MinimalSettings['categories'] = [[
+    'id' => 'uncategorized',
+    'name' => 'Uncategorized',
+    'icon' => '•',
+    'color' => '#8b93a4',
+]];
+$v12MinimalSettings['actions'] = [];
+$v12MinimalSettings['combos'] = [];
+
+$v12State = $v11State;
+$v12State['version'] = 12;
+unset($v12State['settings']);
+$v12State['profiles'] = [
+    'activeId' => 'profile-2',
+    'slots' => [
+        [
+            'id' => 'profile-1',
+            'name' => 'Work Mode',
+            'settings' => $v12PrimarySettings,
+        ],
+        [
+            'id' => 'profile-2',
+            'name' => 'Bare Minimum',
+            'settings' => $v12MinimalSettings,
+        ],
+        [
+            'id' => 'profile-3',
+            'name' => 'Weekend',
+            'settings' => $v12PrimarySettings,
+        ],
+    ],
+];
+
+$validatedV12 = dalli_validate_state($v12State);
+test_assert(($validatedV12['version'] ?? null) === 12, 'v12 profile state should validate');
+test_assert(($validatedV12['profiles']['activeId'] ?? null) === 'profile-2', 'v12 should preserve the active profile');
+test_assert(count($validatedV12['profiles']['slots'] ?? []) === 3, 'v12 should require exactly three profile slots');
+test_assert(($validatedV12['profiles']['slots'][0]['settings']['chillMultiplier'] ?? null) === 2.0, 'profile settings should preserve the template-backed combat schema');
+test_assert(($validatedV12['profiles']['slots'][1]['settings']['categories'][0]['id'] ?? null) === 'uncategorized', 'minimal profiles should keep the permanent fallback category');
+test_assert(($validatedV12['oneOffs'][0]['categoryId'] ?? null) === 'work', 'shared One-off category references should remain stored even when absent from the active profile');
+
 $pdo = dalli_pdo();
 test_assert(dalli_send_registration_admin_notification($pdo, 'nobody', 'nobody@example.test') === false, 'disabled admin notification should be a no-op even without mail transport');
 test_assert(dalli_auth_schema_ready($pdo), 'modern auth schema should be detected');
@@ -230,6 +274,31 @@ $pdo->prepare("UPDATE users SET status = 'disabled' WHERE id = ?")->execute([$us
 $blockedRemember = dalli_try_remember_login($pdo);
 test_assert($blockedRemember === null, 'inactive account must not restore from remembered device');
 $pdo->prepare("UPDATE users SET status = 'active' WHERE id = ?")->execute([$userId]);
+
+$deleteProbeHash = dalli_hash_password('delete probe password phrase');
+$pdo->prepare(
+    "INSERT INTO users (username, email, password_hash, role, status, email_verified_at, password_changed_at)
+     VALUES ('deleteprobe', 'deleteprobe@example.test', ?, 'user', 'active', NOW(), NOW())"
+)->execute([$deleteProbeHash]);
+$deleteProbeId = (int) $pdo->lastInsertId();
+dalli_store_envelope($pdo, $deleteProbeId, dalli_empty_envelope(), 0);
+dalli_issue_auth_token($pdo, $deleteProbeId, 'email_verify', 600, []);
+$pdo->prepare(
+    "INSERT INTO auth_sessions
+        (user_id, selector, validator_hash, created_at, last_used_at, expires_at)
+     VALUES (?, ?, ?, NOW(), NOW(), DATE_ADD(NOW(), INTERVAL 1 DAY))"
+)->execute([
+    $deleteProbeId,
+    bin2hex(random_bytes(16)),
+    hash('sha256', bin2hex(random_bytes(32))),
+]);
+test_assert((int) $pdo->query("SELECT COUNT(*) FROM user_state WHERE user_id = {$deleteProbeId}")->fetchColumn() === 1, 'delete probe should own cloud state');
+test_assert((int) $pdo->query("SELECT COUNT(*) FROM auth_sessions WHERE user_id = {$deleteProbeId}")->fetchColumn() === 1, 'delete probe should own remembered session data');
+test_assert((int) $pdo->query("SELECT COUNT(*) FROM auth_tokens WHERE user_id = {$deleteProbeId}")->fetchColumn() >= 1, 'delete probe should own auth token data');
+$pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$deleteProbeId]);
+test_assert((int) $pdo->query("SELECT COUNT(*) FROM user_state WHERE user_id = {$deleteProbeId}")->fetchColumn() === 0, 'account deletion should cascade cloud state');
+test_assert((int) $pdo->query("SELECT COUNT(*) FROM auth_sessions WHERE user_id = {$deleteProbeId}")->fetchColumn() === 0, 'account deletion should cascade remembered sessions');
+test_assert((int) $pdo->query("SELECT COUNT(*) FROM auth_tokens WHERE user_id = {$deleteProbeId}")->fetchColumn() === 0, 'account deletion should cascade auth tokens');
 
 test_assert(dalli_rate_consume_strict('test_strict', 'global', 2, 3600), 'strict limiter should allow first hit');
 test_assert(dalli_rate_consume_strict('test_strict', 'global', 2, 3600), 'strict limiter should allow final budgeted hit');

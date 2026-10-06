@@ -14,7 +14,7 @@ This directory is the reusable authentication boundary for MoLife.
 - `mailer.php` — authenticated SMTP transport, transactional account emails, and optional verified-registration operator notifications
 - `state-bridge.php` — **MoLife compatibility adapter only** for remembered sessions/invites created before the dedicated auth tables existed
 
-The public files one directory up (`login.php`, `register.php`, `verify-email.php`, and so on) remain HTTP adapters. They preserve the existing API contract and are intentionally separate from the auth primitives.
+The public files one directory up (`login.php`, `register.php`, `verify-email.php`, `delete-account.php`, and so on) remain HTTP adapters. They preserve the existing API contract and are intentionally separate from the auth primitives.
 
 ## Reusing this in another project
 
@@ -36,3 +36,6 @@ The historical `dalli_*` function and cookie names are retained in v4.8 delibera
 v4.9 adds public-facing availability controls around this boundary: fail-closed registration and mail budgets, a pending-account circuit breaker, fixed-lifetime remembered-device credentials, permanent owner-setup lockout after initialization, and active-account checks on protected application data.
 
 The default budgets are intentionally conservative and can be overridden in the private `security` config section. Exhausting a public-signup budget closes new registration temporarily; it does not disable login or cloud sync for existing users.
+
+
+v4.24 adds self-service deletion for active non-owner accounts. The HTTP adapter requires same-origin + CSRF protection, current-password re-authentication and exact username confirmation before deleting the user row. Existing foreign-key cascades remove application state, remembered sessions and auth tokens. The owner identity is intentionally not deletable until the application has an explicit ownership-transfer flow.

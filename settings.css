@@ -110,3 +110,112 @@
     margin-top: 14px;
   }
 }
+
+
+/* MoLife v4.24 — Bureau of Authorized Alternate Selves */
+.profiles-editor {
+  display: grid;
+  gap: 10px;
+}
+
+.profile-editor-row {
+  display: grid;
+  grid-template-columns: 110px minmax(180px, 1fr) auto;
+  align-items: end;
+  gap: 14px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.055);
+  border-radius: 14px;
+  background: rgba(255,255,255,.025);
+}
+
+.profile-editor-row.is-active {
+  border-color: rgba(122,108,255,.28);
+  background: rgba(122,108,255,.055);
+}
+
+.profile-editor-identity {
+  display: grid;
+  gap: 3px;
+  align-self: center;
+}
+
+.profile-editor-identity strong {
+  font-size: .72rem;
+  letter-spacing: .08em;
+}
+
+.profile-editor-identity span {
+  color: var(--muted);
+  font-size: .64rem;
+  font-weight: 800;
+}
+
+.profile-editor-row.is-active .profile-editor-identity span {
+  color: #a99fff;
+}
+
+.profile-name-field {
+  display: grid;
+  gap: 6px;
+}
+
+.profile-name-field > span {
+  color: var(--muted);
+  font-size: .72rem;
+}
+
+.profile-name-field input {
+  width: 100%;
+}
+
+.profile-editor-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-height: 40px;
+}
+
+.profile-active-label {
+  color: #a99fff;
+  font-size: .72rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.configuration-cleanup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.danger-button-quiet {
+  background: rgba(255,109,122,.07);
+  border-color: rgba(255,109,122,.25);
+  color: #ffb0b8;
+}
+
+@media (max-width: 760px) {
+  .profile-editor-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .profile-editor-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .profile-editor-actions .secondary-button {
+    flex: 1 1 160px;
+  }
+
+  .configuration-cleanup-actions {
+    display: grid;
+  }
+
+  .configuration-cleanup-actions button {
+    width: 100%;
+  }
+}

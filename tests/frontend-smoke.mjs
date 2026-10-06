@@ -13,6 +13,7 @@ const app = read('app.js');
 const cloud = read('cloud.js');
 const metrics = read('metrics-viewer.js');
 const serviceWorker = read('service-worker.js');
+const deleteAccountApi = read('api/delete-account.php');
 const cssFiles = [
   'styles.css',
   'pawnshop.css',
@@ -181,10 +182,30 @@ if (!app.includes('baseDamage === damageMigration[0]')) {
   fail('Default-damage migration must only touch actions that still have their stock damage');
 }
 
-if (!app.includes('const STATE_VERSION = 11;')
+if (!app.includes('const STATE_VERSION = 12;')
+    || !app.includes("const PROFILE_IDS = Object.freeze(['profile-1', 'profile-2', 'profile-3']);")
+    || !app.includes('profiles: {')
+    || !app.includes('activeId: PROFILE_IDS[0]')
     || !app.includes('onboarding: {')
     || !app.includes('infoSeen: false')) {
-  fail('v11 first-run onboarding defaults are missing');
+  fail('v12 profile/onboarding defaults are incomplete');
+}
+
+if (app.includes('state.settings')) {
+  fail('v12 must not keep a second persistent state.settings source beside profile settings');
+}
+
+if (!app.includes('function normalizeSettings(')
+    || !app.includes('settings: normalizeSettings(sourceProfile?.settings, shouldMigrateDefaultActionDamage)')
+    || !app.includes('return normalizeSettings(migratedSettings, sourceStateVersion < 11);')) {
+  fail('Profiles and templates must share the same settings normalization path');
+}
+
+if (!app.includes('sourceVersion >= 2 && sourceVersion < 11')
+    || !app.includes('function migrateV11State(candidate)')
+    || !app.includes('slots: PROFILE_IDS.map((id, index) => ({')
+    || !app.includes('settings: deepClone(legacySettings)')) {
+  fail('v11-to-v12 three-profile migration is incomplete');
 }
 
 if (!app.includes('const LEGACY_TEMPLATE_VERSION = 1;')
@@ -217,8 +238,41 @@ if (missingTemplateSettings.length) {
   fail(`Template-backed settings missing from settings builder: ${missingTemplateSettings.join(', ')}`);
 }
 if (!html.includes('Actions (type, damage, order, visibility and Required counts)')
-    || !html.includes('onboarding state')) {
-  fail('Settings-template scope copy is out of date');
+    || !html.includes('onboarding state')
+    || !html.includes('id="profileSwitcher"')
+    || !html.includes('id="profilesEditor"')
+    || !html.includes('id="removeAllCategoriesButton"')
+    || !html.includes('id="removeAllActionsButton"')
+    || !html.includes('id="removeAllCategoriesActionsButton"')) {
+  fail('v4.24 profile/template/cleanup UI contract is incomplete');
+}
+
+if (!app.includes("clearActiveProfileConfiguration('categories')")
+    || !app.includes("clearActiveProfileConfiguration('actions')")
+    || !app.includes("clearActiveProfileConfiguration('all')")
+    || !app.includes('settingsDraft.categories = [uncategorizedCategory()]')
+    || !app.includes('settingsDraft.actions = []')
+    || !app.includes('settingsDraft.combos = []')) {
+  fail('Active-profile bulk cleanup operations are incomplete');
+}
+
+if (!app.includes('function effectiveOneOffCategoryId(')
+    || !app.includes('effectiveOneOffCategoryId(oneOff) === category.id')) {
+  fail('Shared One-offs must fall back non-destructively when a profile lacks their category');
+}
+
+if (!cloud.includes("apiRequest('delete-account.php'")
+    || !cloud.includes('localStorage.removeItem(userStorageKey(deletedUserId))')
+    || !cloud.includes('user.isOwner')
+    || !cloud.includes('customizedProfiles')) {
+  fail('Account deletion/profile-aware cloud state wiring is incomplete');
+}
+
+if (!deleteAccountApi.includes("password_verify($password")
+    || !deleteAccountApi.includes("role <> 'owner'")
+    || !deleteAccountApi.includes('dalli_require_csrf()')
+    || !deleteAccountApi.includes('dalli_clear_remember_cookie()')) {
+  fail('Account deletion endpoint is missing required re-authentication or session safeguards');
 }
 
 const mainCss = read('styles.css');
