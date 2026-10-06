@@ -721,6 +721,24 @@ input, select {
   margin-top: 0;
 }
 
+.delete-account-section {
+  border-color: rgba(255,109,122,.2);
+}
+
+.delete-account-controls {
+  display: grid;
+  gap: 10px;
+}
+
+.delete-account-controls .danger-button {
+  width: fit-content;
+  margin-top: 2px;
+}
+
+.login-message[data-kind="warning"] {
+  color: #e8c56c;
+}
+
 .mail-test-controls {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
