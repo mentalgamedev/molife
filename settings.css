@@ -112,7 +112,7 @@
 }
 
 
-/* MoLife v4.24 — Bureau of Authorized Alternate Selves */
+/* MoLife v4.25 — Office of Optional Selves */
 .profiles-editor {
   display: grid;
   gap: 10px;
@@ -169,12 +169,26 @@
   width: 100%;
 }
 
+.profile-settings-section .settings-section-head {
+  align-items: center;
+}
+
+.profile-settings-section .settings-section-head > .secondary-button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .profile-editor-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 8px;
   min-height: 40px;
+}
+
+.profile-editor-actions .danger-button {
+  min-height: 38px;
 }
 
 .profile-active-label {
@@ -207,8 +221,17 @@
     flex-wrap: wrap;
   }
 
-  .profile-editor-actions .secondary-button {
-    flex: 1 1 160px;
+  .profile-settings-section .settings-section-head {
+    align-items: stretch;
+  }
+
+  .profile-settings-section .settings-section-head > .secondary-button {
+    width: 100%;
+  }
+
+  .profile-editor-actions .secondary-button,
+  .profile-editor-actions .danger-button {
+    flex: 1 1 150px;
   }
 
   .configuration-cleanup-actions {

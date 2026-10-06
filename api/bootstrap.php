@@ -5,7 +5,7 @@ ini_set('display_errors', '0');
 error_reporting(E_ALL);
 header_remove('X-Powered-By');
 
-const DALLI_MAX_BODY_BYTES = 524288; // 512 KiB — three v12 profile settings payloads share one synced state
+const DALLI_MAX_BODY_BYTES = 1048576; // 1 MiB — bounded headroom for up to five v13 profile settings payloads
 const DALLI_SESSION_NAME = 'DALLISESSID';
 
 function dalli_json_response(array $payload, int $status = 200): void
