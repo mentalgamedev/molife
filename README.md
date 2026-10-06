@@ -1,6 +1,6 @@
 # MoLife
 
-MoLife is a small daily XP game from the deeply questionable civic ecosystem of **Crestfallen**, allegedly powered by **mo.les.tech**. It turns everyday tasks into a daily challenge without requiring every part of life to receive attention every single day.
+MoLife is a small daily XP game from the deeply dubious civic ecosystem of **Crestfallen**, allegedly powered by **mo.les.tech**. It turns everyday tasks into a daily challenge without requiring every part of life to receive attention every single day.
 
 ## Core loop
 
@@ -61,7 +61,7 @@ Current item pool, preserving the same rarity/damage ladder as the old contraban
 
 Normal items also roll a condition. Better conditions are progressively rarer:
 
-- **Questionable** — ×0.5
+- **Dubious** — ×0.5
 - **Standard** — ×1.0
 - **Pimped** — ×1.5
 - **Over-engineered** — ×2.0
@@ -93,7 +93,7 @@ MoLife can classify days as things such as:
 - Domestic Menace
 - Wellness Criminal
 - One-Track Mind
-- Suspiciously Functional Adult
+- Alarmingly Functional Adult
 - Technically Victorious
 - Needs Intervention
 
@@ -313,7 +313,7 @@ At those defaults, the resistance portion of repeated actions is approximately *
 
 Track-o-Tron copy now makes the slower focused resistance visible, and Settings explains that the Focus factor controls both workload and focused Resistance protection.
 
-## v4.17 — Office of Questionable Loadouts
+## v4.17 — Office of Dubious Loadouts
 
 Phat Ed's Pawnshop now presents its eight-item capacity as a compact RPG-style equipment case instead of a list of full-size cards. Owned items fill fixed visual compartments in the existing damage-first order, unused capacity remains visible as numbered empty slots, and the Rite Of Illumination retains an exceptional legendary treatment. Pathological migrated over-capacity inventories remain fully accessible rather than hiding items.
 
@@ -459,6 +459,14 @@ Removing a profile deletes only that profile's configuration. Shared progression
 State schema is now **v13**. Existing v12 users keep all of their existing profiles; the migration does not collapse the previous three slots. Older pre-profile state migrates to a single Default profile. Profile IDs are now stable opaque identifiers rather than fixed slot names, allowing add/remove without renumbering.
 
 Profiles and Settings Templates remain deliberately tied to the **same settings payload and normalization path**. No SQL migration is required. The bounded API request ceiling increases from **512 KiB to 1 MiB** to provide headroom for up to five valid profile payloads.
+
+## v4.26 — Department of Personal Space
+
+The Profiles section gets a cosmetic spacing pass: more room between its heading, controls, profile cards and shared-state note, plus slightly roomier profile rows and action spacing on desktop and mobile.
+
+Repeated human-facing uses of **questionable** and **suspiciously** have been refreshed. Pawnshop/configuration flavor now favors **dubious**, while the old “Suspiciously Functional Adult” gag becomes **Alarmingly Functional Adult**. Stable internal identifiers such as the persisted Pawnshop condition id `questionable` remain unchanged for compatibility.
+
+State schema remains **v13** and no SQL migration is required.
 
 ## Self-hosting
 
