@@ -112,18 +112,22 @@
 }
 
 
-/* MoLife v4.25 — Office of Optional Selves */
+/* MoLife v4.26 — Department of Personal Space */
+.profile-settings-section {
+  padding-bottom: 22px;
+}
+
 .profiles-editor {
   display: grid;
-  gap: 10px;
+  gap: 14px;
 }
 
 .profile-editor-row {
   display: grid;
   grid-template-columns: 110px minmax(180px, 1fr) auto;
   align-items: end;
-  gap: 14px;
-  padding: 12px;
+  gap: 18px;
+  padding: 16px 14px;
   border: 1px solid rgba(255,255,255,.055);
   border-radius: 14px;
   background: rgba(255,255,255,.025);
@@ -136,8 +140,9 @@
 
 .profile-editor-identity {
   display: grid;
-  gap: 3px;
+  gap: 5px;
   align-self: center;
+  padding-block: 3px;
 }
 
 .profile-editor-identity strong {
@@ -157,7 +162,7 @@
 
 .profile-name-field {
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
 .profile-name-field > span {
@@ -170,12 +175,15 @@
 }
 
 .profile-settings-section .settings-section-head {
-  align-items: center;
+  align-items: flex-start;
+  gap: 24px;
+  margin-bottom: 18px;
 }
 
 .profile-settings-section .settings-section-head > .secondary-button {
   flex: 0 0 auto;
   white-space: nowrap;
+  margin-top: 8px;
 }
 
 .profile-editor-actions {
@@ -183,8 +191,8 @@
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 8px;
-  min-height: 40px;
+  gap: 10px;
+  min-height: 44px;
 }
 
 .profile-editor-actions .danger-button {
@@ -196,6 +204,12 @@
   font-size: .72rem;
   font-weight: 800;
   white-space: nowrap;
+  padding-inline: 2px;
+}
+
+#profileCountNote {
+  margin-top: 14px;
+  line-height: 1.45;
 }
 
 .configuration-cleanup-actions {
@@ -223,10 +237,13 @@
 
   .profile-settings-section .settings-section-head {
     align-items: stretch;
+    gap: 12px;
+    margin-bottom: 16px;
   }
 
   .profile-settings-section .settings-section-head > .secondary-button {
     width: 100%;
+    margin-top: 0;
   }
 
   .profile-editor-actions .secondary-button,
