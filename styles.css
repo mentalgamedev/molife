@@ -210,8 +210,6 @@ select:focus-visible {
 .category-title { font-size: 1rem; }
 .category-subtitle { color: var(--muted); font-size: .75rem; margin-top: 2px; }
 .category-score { font-weight: 850; font-size: .9rem; white-space: nowrap; }
-.category-meter { height: 7px; margin: 15px 0 17px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,.07); }
-.category-meter-fill { width: 0; height: 100%; border-radius: inherit; background: var(--category-color); transition: width .25s ease; }
 .actions-list { display: grid; gap: 8px; }
 .action-button {
   width: 100%;
@@ -334,7 +332,6 @@ input, select {
   border-style: dashed;
   background: linear-gradient(180deg, rgba(255,255,255,.015), transparent), var(--panel);
 }
-.category-meter[hidden] { display: none; }
 
 
 .delete-action { width: 36px; height: 36px; border: 1px solid rgba(255,109,122,.12); border-radius: 10px; background: rgba(255,109,122,.06); color: #ff9da7; cursor: pointer; }
@@ -1042,38 +1039,6 @@ body {
 .category-score {
   color: var(--category-color);
   font-size: .95rem;
-}
-.efficiency-row {
-  margin: 14px 0 17px;
-  padding: 10px 11px;
-  border-radius: 12px;
-  background: rgba(255,255,255,.025);
-  border: 1px solid rgba(255,255,255,.045);
-}
-.efficiency-copy {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 9px;
-}
-.efficiency-label {
-  color: var(--muted);
-  font-size: .68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .08em;
-}
-.efficiency-value {
-  color: var(--category-color);
-  font-size: .82rem;
-}
-.efficiency-row .category-meter {
-  margin: 8px 0 6px;
-  height: 5px;
-}
-.efficiency-next {
-  color: #858e9e;
-  font-size: .65rem;
 }
 .action-xp {
   min-width: 45px;
@@ -2049,22 +2014,11 @@ body {
 }
 
 .category-score,
-.efficiency-value,
 .action-xp {
   color: var(--category-color);
   text-shadow: 0 0 18px color-mix(in srgb, var(--category-color) 18%, transparent);
 }
 
-.efficiency-row {
-  border-color: color-mix(in srgb, var(--category-color) 12%, rgba(255,255,255,.04));
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--category-color) 5%, transparent), transparent 65%),
-    var(--category-surface);
-}
-
-.category-meter {
-  background: color-mix(in srgb, var(--category-color) 8%, rgba(255,255,255,.055));
-}
 
 .action-button {
   border-color: color-mix(in srgb, var(--category-color) 12%, rgba(255,255,255,.055));

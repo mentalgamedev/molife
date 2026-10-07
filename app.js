@@ -8,16 +8,17 @@
   const PROFILE_MIN = 1;
   const PROFILE_MAX = 5;
   const PROFILE_NAME_MAX = 40;
-  const ITEM_DROP_CHANCE = 0.40;
+  const ITEM_DROP_CHANCE = 0.50;
   const ITEM_CAPACITY = 8;
   const STORAGE_KEY = 'dailyXpGame.v2';
   const HISTORY_LIMIT = 365;
   const DETAILED_HISTORY_DAYS = 90;
   const UNCATEGORIZED_ID = 'uncategorized';
   const UNCATEGORIZED_EFFICIENCY = 0.50;
-  const CATEGORY_RESISTANCE = Object.freeze([1, 0.65, 0.40, 0.25]);
   const DEFAULT_FOCUS_FACTOR = 1.5;
-  const DEFAULT_RESISTANCE_BUILDUP = 0.75;
+  // Kept only so v7-v13 state/template payloads remain server-compatible.
+  // Resistance itself was removed in v4.27.
+  const LEGACY_RESISTANCE_BUILDUP = 0;
   const DEFAULT_CHILL_MULTIPLIER = 2;
   const CHILL_MULTIPLIER_MIN = 1.25;
   const CHILL_MULTIPLIER_MAX = 4;
@@ -202,7 +203,7 @@
       fullEnemyHp: 100,
       focusCategoryId: 'work',
       focusFactor: DEFAULT_FOCUS_FACTOR,
-      resistanceBuildup: DEFAULT_RESISTANCE_BUILDUP,
+      resistanceBuildup: LEGACY_RESISTANCE_BUILDUP,
       chillModeEnabled: false,
       chillMultiplier: DEFAULT_CHILL_MULTIPLIER,
       categories: [
@@ -375,7 +376,6 @@
     goalInput: document.querySelector('#goalInput'),
     goalPreview: document.querySelector('#goalPreview'),
     focusFactorInput: document.querySelector('#focusFactorInput'),
-    resistanceBuildupInput: document.querySelector('#resistanceBuildupInput'),
     chillModeInput: document.querySelector('#chillModeInput'),
     chillMultiplierInput: document.querySelector('#chillMultiplierInput'),
     chillMultiplierRow: document.querySelector('#chillMultiplierRow'),
@@ -995,7 +995,7 @@
       ...(migrated.settings || {}),
       focusCategoryId: focusedLegacy?.id || null,
       focusFactor: focusedLegacy?.focus || DEFAULT_FOCUS_FACTOR,
-      resistanceBuildup: DEFAULT_RESISTANCE_BUILDUP,
+      resistanceBuildup: LEGACY_RESISTANCE_BUILDUP,
       categories: categories.map(category => {
         const next = { ...category };
         delete next.focus;
@@ -1143,12 +1143,8 @@
       10,
       legacyFocused?.focus || DEFAULT_FOCUS_FACTOR
     );
-    settings.resistanceBuildup = clampNumber(
-      source.resistanceBuildup,
-      0,
-      2,
-      DEFAULT_RESISTANCE_BUILDUP
-    );
+    // Preserve the legacy payload key at zero for v7-v13 compatibility.
+    settings.resistanceBuildup = LEGACY_RESISTANCE_BUILDUP;
     settings.chillModeEnabled = source.chillModeEnabled === true;
     settings.chillMultiplier = clampNumber(
       source.chillMultiplier,
@@ -1555,33 +1551,18 @@
     return clampInt(settings.fullEnemyHp, 20, 1000, 100);
   }
 
-  function categoryResistanceForCount(actionCount, settings = activeSettings(), focusFactor = 1) {
-    const index = Math.min(CATEGORY_RESISTANCE.length - 1, Math.max(0, clampInt(actionCount, 0, 100000, 0)));
-    const base = CATEGORY_RESISTANCE[index];
-    const buildup = clampNumber(settings.resistanceBuildup, 0, 2, DEFAULT_RESISTANCE_BUILDUP);
-    const focusDivisor = Math.max(1, clampNumber(focusFactor, 1, 10, 1));
-    const effectiveBuildup = buildup / focusDivisor;
-    return Math.pow(base, effectiveBuildup);
-  }
-
-  function getCategoryEfficiency(categoryId, actionCount = 0, settings = activeSettings()) {
+  function getCategoryDamageModifier(categoryId, settings = activeSettings()) {
     if (categoryId === UNCATEGORIZED_ID) {
-      return { focused: false, focus: 0, resistance: 1, multiplier: UNCATEGORIZED_EFFICIENCY, tier: 0, nextResistance: null };
+      return { focused: false, focus: 0, multiplier: UNCATEGORIZED_EFFICIENCY };
     }
     const category = settings.categories.find(item => item.id === categoryId);
-    if (!category) return { focused: false, focus: 1, resistance: 1, multiplier: 1, tier: 0, nextResistance: null };
+    if (!category) return { focused: false, focus: 1, multiplier: 1 };
 
     const focused = settings.focusCategoryId === categoryId;
     const focus = focused
       ? clampNumber(settings.focusFactor, 1, 10, DEFAULT_FOCUS_FACTOR)
       : 1;
-    const count = Math.max(0, clampInt(actionCount, 0, 100000, 0));
-    const tier = Math.min(CATEGORY_RESISTANCE.length - 1, count);
-    const resistance = categoryResistanceForCount(count, settings, focus);
-    const nextResistance = count + 1 < CATEGORY_RESISTANCE.length
-      ? categoryResistanceForCount(count + 1, settings, focus)
-      : null;
-    return { focused, focus, resistance, multiplier: resistance / focus, tier, nextResistance };
+    return { focused, focus, multiplier: 1 / focus };
   }
 
   function toggleFocusedCategory(categoryId) {
@@ -1602,7 +1583,6 @@
   function getSummary() {
     const categoryDamage = Object.fromEntries(activeSettings().categories.map(category => [category.id, 0]));
     const categoryBaseDamage = Object.fromEntries(activeSettings().categories.map(category => [category.id, 0]));
-    const categoryActionCount = Object.fromEntries(activeSettings().categories.map(category => [category.id, 0]));
     const maxHp = Math.max(20, state.current.maxHp || getEnemyHp());
     const requiredActions = (Array.isArray(state.current.requiredActions) ? state.current.requiredActions : [])
       .filter(required => activeSettings().actions.some(action => action.id === required.actionId));
@@ -1624,7 +1604,6 @@
       totalBaseDamage += tx.baseDamage;
       categoryDamage[categoryId] = (categoryDamage[categoryId] || 0) + tx.damage;
       categoryBaseDamage[categoryId] = (categoryBaseDamage[categoryId] || 0) + tx.baseDamage;
-      categoryActionCount[categoryId] = (categoryActionCount[categoryId] || 0) + 1;
     });
 
     const requiredProgress = {};
@@ -1651,31 +1630,25 @@
 
     return {
       totalDamage, totalBaseDamage, comboDamage, combosLanded, itemDamage, itemsUsed,
-      categoryDamage, categoryBaseDamage, categoryActionCount,
+      categoryDamage, categoryBaseDamage,
       maxHp, currentHp, overkill, requiredTotal, requiredCompleted, requiredProgress,
       requiredRemainingIds, requiredRemainingCount, isTenacious, tenaciousHolding,
       itemBypassVictory, isVictory
     };
   }
 
-  function calculateDamage(action, priorActionCount = null, settings = activeSettings()) {
+  function calculateDamage(action, settings = activeSettings()) {
     const baseDamage = action.baseDamage;
-    const categoryId = action.categoryId;
-    const summary = priorActionCount === null ? getSummary() : null;
-    const actionCount = priorActionCount === null
-      ? (summary.categoryActionCount[categoryId] || 0)
-      : Math.max(0, clampInt(priorActionCount, 0, 100000, 0));
-    const efficiency = getCategoryEfficiency(categoryId, actionCount, settings);
+    const modifier = getCategoryDamageModifier(action.categoryId, settings);
     const chillMultiplier = settings.chillModeEnabled === true
       ? clampNumber(settings.chillMultiplier, CHILL_MULTIPLIER_MIN, CHILL_MULTIPLIER_MAX, DEFAULT_CHILL_MULTIPLIER)
       : 1;
-    const raw = baseDamage * efficiency.multiplier * chillMultiplier;
+    const raw = baseDamage * modifier.multiplier * chillMultiplier;
     return {
       baseDamage,
       damage: Math.max(1, Math.round(raw)),
-      efficiency: efficiency.multiplier,
-      focus: efficiency.focus,
-      resistance: efficiency.resistance,
+      efficiency: modifier.multiplier,
+      focus: modifier.focus,
       chillMultiplier,
       raw
     };
@@ -2464,8 +2437,8 @@
     state.current.transactions.push(actionTx);
     state.oneOffs = state.oneOffs.filter(item => item.id !== oneOff.id);
 
-    // One-offs use normal damage/resistance, but deliberately never participate
-    // in combos or Required-for-victory rules.
+    // One-offs use the normal Focus/Chill damage rules, but deliberately never
+    // participate in combos or Required-for-victory rules.
     const justDefeated = finalizeVictoryIfNeeded();
     const afterSummary = getSummary();
     const tenaciousResisted = !beforeSummary.tenaciousHolding && afterSummary.tenaciousHolding;
@@ -2648,12 +2621,7 @@
     }
 
     if (dominant && dominant.baseDamage > 0) {
-      const efficiency = getCategoryEfficiency(dominant.id, summary.categoryActionCount[dominant.id] || 0);
-      if (efficiency.multiplier <= 0.6) {
-        messages.push(`TRACK-O-TRON REPORTS ${dominant.name.toUpperCase()} SATURATION; DARK DOPPELGÄNGER HAS DEVELOPED RESISTANCE`);
-      } else {
-        messages.push(`${dominant.name.toUpperCase()} CURRENTLY LEADS LOCAL DAMAGE MARKETS`);
-      }
+      messages.push(`${dominant.name.toUpperCase()} CURRENTLY LEADS LOCAL DAMAGE MARKETS`);
     }
 
     const level = getLevelProgress();
@@ -2846,7 +2814,7 @@
 
   function attackReportFlavor(report) {
     const lines = [
-      () => `Clean hit. ${report.actionName} has been entered into the record as a successful act of resistance.`,
+      () => `Clean hit. ${report.actionName} has been entered into the record as a successful act of defiance.`,
       () => `${report.actionName} connected. Darkness has been asked to revise its expectations downward.`,
       () => `Impact confirmed. The hostile internal entity briefly lost control of the meeting.`,
       () => `${report.categoryName} activity landed successfully. A nearby excuse has withdrawn its statement.`,
@@ -3168,8 +3136,9 @@
     } else if (summary.isVictory && loot.rolled) {
       els.lootDropMessage.textContent = 'No Pawnshop item today. Phat Ed appears unmoved.';
     } else {
-      els.lootDropMessage.textContent = 'Each victory has a 40% chance to attract one dubious item while you have room.';
+      els.lootDropMessage.textContent = '';
     }
+    els.lootDropMessage.hidden = !els.lootDropMessage.textContent;
 
     els.arsenalStatus.textContent = summary.isVictory
       ? 'Target down · save the good stuff for a worse day.'
@@ -3177,7 +3146,7 @@
         ? 'Storage full · use something before Phat Ed “finds” another item.'
         : inventory.length
           ? 'Select an item to inspect Phat Ed’s dubious merchandise.'
-          : 'Empty. Win fights for a chance to acquire dubious merchandise.';
+          : 'Empty. Win fights and see what Phat Ed turns up.';
 
     const sortedInventory = [...inventory]
       .sort((a, b) => b.damage - a.damage || b.acquiredAt - a.acquiredAt);
@@ -3268,9 +3237,6 @@
       const subtitle = fragment.querySelector('.category-subtitle');
       const score = fragment.querySelector('.category-score');
       const focusToggle = fragment.querySelector('.category-focus-toggle');
-      const efficiencyValue = fragment.querySelector('.efficiency-value');
-      const fill = fragment.querySelector('.category-meter-fill');
-      const next = fragment.querySelector('.efficiency-next');
       const actionDeck = fragment.querySelector('.action-deck');
       const actionsList = fragment.querySelector('.actions-list');
       const oneOffToggle = fragment.querySelector('.one-off-toggle');
@@ -3281,12 +3247,11 @@
       const oneOffCancel = fragment.querySelector('.one-off-cancel');
 
       const dealtDamage = summary.categoryDamage[category.id] || 0;
-      const actionCount = summary.categoryActionCount[category.id] || 0;
-      const efficiency = getCategoryEfficiency(category.id, actionCount);
+      const modifier = getCategoryDamageModifier(category.id);
       applyCategoryPaletteVars(card, category, index);
       card.dataset.categoryId = category.id;
       if (category.id === UNCATEGORIZED_ID) card.classList.add('is-fallback-category');
-      card.classList.toggle('is-focused-category', efficiency.focused);
+      card.classList.toggle('is-focused-category', modifier.focused);
 
       icon.textContent = category.icon;
       title.textContent = category.name;
@@ -3295,30 +3260,20 @@
       if (category.id === UNCATEGORIZED_ID) {
         focusToggle.hidden = true;
         subtitle.textContent = 'Fallback · fixed 50% damage';
-        efficiencyValue.textContent = '50%';
-        fill.style.width = '100%';
-        next.textContent = 'Assign these actions to a real category when convenient.';
       } else {
-        const overallPercent = Math.round(efficiency.multiplier * 100);
-        const resistancePercent = Math.round(efficiency.resistance * 100);
         const focusFactor = clampNumber(activeSettings().focusFactor, 1, 10, DEFAULT_FOCUS_FACTOR);
         focusToggle.hidden = false;
-        focusToggle.classList.toggle('is-active', efficiency.focused);
-        focusToggle.setAttribute('aria-pressed', efficiency.focused ? 'true' : 'false');
-        focusToggle.textContent = efficiency.focused ? 'FOCUSED' : 'FOCUS';
-        focusToggle.title = efficiency.focused
+        focusToggle.classList.toggle('is-active', modifier.focused);
+        focusToggle.setAttribute('aria-pressed', modifier.focused ? 'true' : 'false');
+        focusToggle.textContent = modifier.focused ? 'FOCUSED' : 'FOCUS';
+        focusToggle.title = modifier.focused
           ? 'Remove Focus from this category'
           : `Focus ${category.name}; only one category can be focused`;
         focusToggle.addEventListener('click', () => toggleFocusedCategory(category.id));
 
-        subtitle.textContent = efficiency.focused
-          ? `Focused · ${focusFactor.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')}× workload · slower resistance`
+        subtitle.textContent = modifier.focused
+          ? `Focused · ${focusFactor.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')}× workload`
           : 'Standard priority';
-        efficiencyValue.textContent = `${overallPercent}%`;
-        fill.style.width = `${resistancePercent}%`;
-        next.textContent = efficiency.nextResistance === null
-          ? `${efficiency.focused ? 'Focused resistance' : 'Resistance'} floor reached · category stays at ${resistancePercent}%`
-          : `${efficiency.focused ? 'Focused resistance' : 'Category resistance'} ${resistancePercent}% · next action drops to ${Math.round(efficiency.nextResistance * 100)}%`;
       }
 
       const originalOrder = new Map(activeSettings().actions.map((action, actionIndex) => [action.id, actionIndex]));
@@ -3346,7 +3301,7 @@
         actionsList.append(empty);
       } else {
         actions.forEach(action => {
-          const reward = calculateDamage(action, actionCount);
+          const reward = calculateDamage(action);
           const button = document.createElement('button');
           button.type = 'button';
           button.className = 'action-button';
@@ -3409,7 +3364,7 @@
         });
 
         oneOffs.forEach(oneOff => {
-          const reward = calculateDamage(oneOff, actionCount);
+          const reward = calculateDamage(oneOff);
           const row = document.createElement('div');
           row.className = 'one-off-row';
 
@@ -3737,7 +3692,6 @@
     settingsDraft.combos = Array.isArray(settingsDraft.combos) ? settingsDraft.combos : [];
     els.goalInput.value = settingsDraft.fullEnemyHp;
     els.focusFactorInput.value = clampNumber(settingsDraft.focusFactor, 1, 10, DEFAULT_FOCUS_FACTOR);
-    els.resistanceBuildupInput.value = clampNumber(settingsDraft.resistanceBuildup, 0, 2, DEFAULT_RESISTANCE_BUILDUP);
     els.chillModeInput.checked = settingsDraft.chillModeEnabled === true;
     els.chillMultiplierInput.value = clampNumber(
       settingsDraft.chillMultiplier,
@@ -4841,12 +4795,7 @@
           10,
           settingsDraft.focusFactor || DEFAULT_FOCUS_FACTOR
         ).toFixed(2)),
-        resistanceBuildup: Number(clampNumber(
-          els.resistanceBuildupInput.value,
-          0,
-          2,
-          settingsDraft.resistanceBuildup ?? DEFAULT_RESISTANCE_BUILDUP
-        ).toFixed(2)),
+        resistanceBuildup: LEGACY_RESISTANCE_BUILDUP,
         chillModeEnabled: els.chillModeInput.checked,
         chillMultiplier: Number(clampNumber(
           els.chillMultiplierInput.value,
@@ -5015,7 +4964,7 @@
       const legacyTemplate = payload.version === LEGACY_TEMPLATE_VERSION;
 
       const confirmed = window.confirm(
-        'Switch to this MoLife settings template?\n\nThis replaces enemy HP, Focus/Resistance/Chill tuning, categories/colors, Actions (type, damage, visibility, Required counts and order), and combos (multipliers and sequences). Your One-offs, progression, fight/mood history, today’s recorded damage and locked HP, Pawnshop items and onboarding state stay untouched.'
+        'Switch to this MoLife settings template?\n\nThis replaces enemy HP, Focus/Chill tuning, categories/colors, Actions (type, damage, visibility, Required counts and order), and combos (multipliers and sequences). Your One-offs, progression, fight/mood history, today’s recorded damage and locked HP, Pawnshop items and onboarding state stay untouched.'
       );
       if (!confirmed) return;
 
@@ -5030,7 +4979,6 @@
 
       els.goalInput.value = settingsDraft.fullEnemyHp;
       els.focusFactorInput.value = settingsDraft.focusFactor;
-      els.resistanceBuildupInput.value = settingsDraft.resistanceBuildup;
       els.chillModeInput.checked = settingsDraft.chillModeEnabled === true;
       els.chillMultiplierInput.value = settingsDraft.chillMultiplier;
       syncChillSettingsControls();
@@ -5173,7 +5121,6 @@
     const target = event.target;
     const editsExistingSetting = target === els.goalInput
       || target === els.focusFactorInput
-      || target === els.resistanceBuildupInput
       || target === els.chillModeInput
       || target === els.chillMultiplierInput
       || target.closest?.('.category-direct-editor, .action-direct-editor, .combo-direct-editor');
@@ -5189,7 +5136,6 @@
     const target = event.target;
     if (target === els.goalInput
       || target === els.focusFactorInput
-      || target === els.resistanceBuildupInput
       || target === els.chillModeInput
       || target === els.chillMultiplierInput
       || target.closest?.('.category-direct-editor, .action-direct-editor, .combo-direct-editor')) {

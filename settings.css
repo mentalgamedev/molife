@@ -38,7 +38,6 @@
 
 .daily-challenge-section #goalInput,
 .daily-challenge-section #focusFactorInput,
-.daily-challenge-section #resistanceBuildupInput,
 .daily-challenge-section #chillMultiplierInput {
   width: 116px;
   min-width: 116px;
@@ -94,7 +93,6 @@
 
   .daily-challenge-section #goalInput,
   .daily-challenge-section #focusFactorInput,
-  .daily-challenge-section #resistanceBuildupInput,
   .daily-challenge-section #chillMultiplierInput,
   .daily-challenge-section .chill-mode-row .chill-toggle {
     width: 100%;
@@ -112,7 +110,7 @@
 }
 
 
-/* MoLife v4.26.1 — Department of Vertical Integration */
+/* MoLife v4.27 — Office of Retroactive Productivity */
 .profile-settings-section {
   padding-bottom: 22px;
 }

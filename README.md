@@ -6,13 +6,12 @@ MoLife is a small daily XP game from the deeply dubious civic ecosystem of **Cre
 
 1. Do reusable **Actions** or clear temporary **One-offs** to deal **Damage**.
 2. Each attack has a base Damage value.
-3. One category can be marked **FOCUSED** directly in Track-o-Tron. Its action damage is divided by the global Focus factor, so that area demands more real activity.
-4. Repeating actions from the same category builds resistance along the familiar **100% → 65% → 40% → 25%** base curve, with a global Resistance buildup setting controlling how strongly that curve is applied.
-5. Reduce today's **Dark Doppelgänger** to 0 HP.
-6. A victory awards exactly **20 Victory XP** once for that calendar day.
-7. Receive an official *Crestfallen Daily* battle report.
+3. One category can be marked **FOCUSED** directly in Track-o-Tron. Its Action damage is divided by the global Focus factor, so that area demands more real activity.
+4. Reduce today's **Dark Doppelgänger** to 0 HP.
+5. A victory awards exactly **20 Victory XP** once for that calendar day.
+6. Receive an official *Crestfallen Daily* battle report.
 
-There are no mandatory categories. A work-only day is valid; Dark Doppelgänger simply becomes increasingly resistant to repeated attacks from the same category. Damage after defeat is retained as **overkill** but never awards extra Victory XP.
+There are no mandatory categories. A work-only day is valid, and repeating the same category no longer changes its damage. Damage after defeat is retained as **overkill** but never awards extra Victory XP.
 
 The interface treats this as a finite daily fight, not an endless self-improvement meter: Dark Doppelgänger gets one prominent fighting-game HP bar, HP never drops below 0, and anything after the victory is optional.
 
@@ -45,9 +44,9 @@ Actions can be marked **Required for victory**. Repeatable actions can also defi
 
 While any required repetitions remain unfinished, Dark Doppelgänger is **TENACIOUS**. Normal action and combo damage can still accumulate, but it cannot finish the fight: once lethal damage has been reached, the displayed HP is held at 1 until all required repetitions have been completed. Track-o-Tron shows per-action progress such as **REQUIRED · 1 / 3**, keeps unfinished required actions at the top of their category, and visually marks them with a gold treatment. If the last outstanding requirement is completed after lethal damage is already banked, the enemy immediately goes down.
 
-A lethal item from **Phat Ed's Pawnshop** can bypass Tenacious. Using an item does not switch Tenacious off globally; the item simply ignores the 1 HP survival rule for its own hit. Item use is explicit, consumes the item immediately, ignores category resistance, and records an immutable item transaction.
+A lethal item from **Phat Ed's Pawnshop** can bypass Tenacious. Using an item does not switch Tenacious off globally; the item simply ignores the 1 HP survival rule for its own hit. Item use is explicit, consumes the item immediately, and records an immutable item transaction.
 
-Victories can generate a mystery Pawnshop crate. Each newly defeated day rolls once at a 40% drop chance, but no new crate is issued while the player already carries 8 or more items. The roll is persisted for that day, so undoing and re-defeating cannot reroll it. Existing migrated inventories over the cap are never deleted; new drops resume after the inventory falls below 8.
+Victories can generate a mystery Pawnshop crate. Each newly defeated day rolls once at a 50% drop chance, but no new crate is issued while the player already carries 8 or more items. The roll is persisted for that day, so undoing and re-defeating cannot reroll it. Existing migrated inventories over the cap are never deleted; new drops resume after the inventory falls below 8.
 
 Current item pool, preserving the same rarity/damage ladder as the old contraband system:
 
@@ -102,7 +101,7 @@ Reports are deterministic local content; they do not require an AI service.
 
 ## Crestfallen Newswire
 
-The header contains a reactive fake news feed that comments on the current fight: Dark Doppelgänger HP, damage, combos, overkill, yesterday's result, rank, streak, level and category resistance. It also mixes in a small deterministic sample of tagged Crestfallen-world reports so references react to context such as Pawnshop items, loot, Tenacious status, work, combos, overkill and late-night activity without overwhelming the MoLife-specific feed. Before victory it reports on the ongoing hostilities; after defeat it becomes reluctantly congratulatory. On wider layouts the Newswire spans the full app width instead of staying inside the brand column.
+The header contains a reactive fake news feed that comments on the current fight: Dark Doppelgänger HP, damage, combos, overkill, yesterday's result, rank, streak, level and dominant damage category. It also mixes in a small deterministic sample of tagged Crestfallen-world reports so references react to context such as Pawnshop items, loot, Tenacious status, work, combos, overkill and late-night activity without overwhelming the MoLife-specific feed. Before victory it reports on the ongoing hostilities; after defeat it becomes reluctantly congratulatory. On wider layouts the Newswire spans the full app width instead of staying inside the brand column.
 
 
 ## Static ambient background
@@ -121,8 +120,8 @@ The main action area is branded **Track-o-Tron**. Category action decks keep a c
 - every regular category has a user-selectable **Color**
 - MoLife derives a safe bright accent plus darker/desaturated panel, action, border and glow variants from that one color
 - exactly one normal category can be marked **FOCUSED** at a time from Track-o-Tron; clicking it again clears Focus
-- the global **Focused category factor** is an inverse damage scaler applied only to that selected category before resistance; the default is **1.5×**
-- the global **Resistance buildup** setting applies an exponent to the existing category resistance curve; **1.0** reproduces the original curve, **0** disables resistance, and the default **0.75** is gentler
+- the global **Focused category factor** is an inverse damage scaler applied only to that selected category; the default is **1.5×**
+- repeated Actions from the same category no longer lose damage; logging several things later in the day is therefore order-independent unless a user-created Combo intentionally depends on order
 - action order is editable by dragging the reorder handle; this order is reflected inside each Track-o-Tron category
 - the Actions section has one-shot sorting by **category**, **Damage (high to low)** or **name (A to Z)**
 - action editor rows inherit the same derived category tint system as the front-page action area
@@ -131,7 +130,7 @@ The main action area is branded **Track-o-Tron**. Category action decks keep a c
 - every reusable action has a **Show in Track-o-Tron** toggle and a **Required for victory** toggle; required actions are forced visible and promoted to the top of their Track-o-Tron category
 - repeatable Required actions have an editable integer **Required repetitions** value; Daily actions are fixed at 1
 - each category has a quick **+ ONE-OFF** control for temporary unfinished business such as calls, forms or errands
-- One-offs persist across days until completed, use the normal category Focus/resistance damage calculation, never participate in Combos or Required-for-victory rules, and disappear immediately after use
+- One-offs persist across days until completed, use the normal Focus/Chill damage calculation, never participate in Combos or Required-for-victory rules, and disappear immediately after use
 - undoing a One-off transaction restores the pending One-off so accidental taps are reversible
 - combos are user-defined ordered sequences of 2–8 action IDs with configurable ×1.05–×3.00 multipliers; unrelated actions do not break progress and repeated action IDs are allowed
 - combo bonuses use the matched actions' actual effective damage, are logged as separate damage events, and can repeat after a sequence resets
@@ -142,7 +141,7 @@ The main action area is branded **Track-o-Tron**. Category action decks keep a c
 
 ## Settings templates
 
-Settings can be exported as a small JSON **template** and imported later to swap between different challenge setups. A template contains the configured enemy HP plus focused-category selection/factor, Resistance buildup, categories, colors, reusable actions, ordering, visibility, Required-for-victory flags and repetition counts, damage values, category links, combos and combo action links.
+Settings can be exported as a small JSON **template** and imported later to swap between different challenge setups. A template contains the configured enemy HP plus focused-category selection/factor, Chill Mode tuning, categories, colors, reusable actions, ordering, visibility, Required-for-victory flags and repetition counts, damage values, category links, combos and combo action links. A zeroed legacy Resistance field is retained internally only for compatibility with older v7-v13 state/template validation.
 
 Templates deliberately do **not** behave like save-game backups. Pending One-offs are intentionally excluded because they are unfinished tasks rather than challenge rules. Importing a template leaves One-offs, Level, Victory XP, Street Cred, streak/history, today's already-recorded damage and Phat Ed's Pawnshop inventory untouched. Current combo progress is reset because the imported combo definitions may differ; today's Required snapshot only loses requirements whose action IDs no longer exist.
 
@@ -473,6 +472,16 @@ State schema remains **v13** and no SQL migration is required.
 Fixes the Profiles section on narrow/mobile screens. The section header now actually stacks its explanatory copy above the **Add profile** button instead of leaving the desktop flex row active, which previously squeezed the copy into a thin column and stretched the button to the height of the text.
 
 Profile cards also get slightly tighter mobile-only spacing so the section remains readable without wasting vertical space. No profile behavior, settings data, sync behavior or schema changes.
+
+State schema remains **v13** and no SQL migration is required.
+
+## v4.27 — Office of Retroactive Productivity
+
+Category **Resistance has been removed from gameplay**. Repeating Actions in one category no longer reduces later damage, so users can log several things they did earlier in the day without the order of entry changing the result. Focus remains a deliberate workload increase, Uncategorized still uses its fixed 50% modifier, and Chill Mode still boosts regular Action and One-off damage. The old Resistance tuning field is no longer shown and is normalized to zero internally only to preserve compatibility with older state/template validation.
+
+The Track-o-Tron Resistance meter and explanatory copy are gone, including the old Newswire saturation message. The onboarding briefing now explicitly tells users to edit/create Actions and categories around their own goals, and keeps Focus as a separate priority concept.
+
+Pawnshop victory loot now rolls at **50%** instead of 40%. The app no longer advertises the numeric drop chance in the Pawnshop UI; it only reports the actual outcome after a victory.
 
 State schema remains **v13** and no SQL migration is required.
 

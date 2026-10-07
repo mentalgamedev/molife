@@ -128,7 +128,9 @@ const retiredSelectors = [
   '.progression-grid',
   '.weapon-card',
   '.inventory-detail',
-  '.weight-row'
+  '.weight-row',
+  '.efficiency-row',
+  '.category-meter'
 ];
 const expectedDefaultDamage = new Map([
   ['wellbeing-workout-30', 30],
@@ -249,7 +251,7 @@ if (!html.includes('Actions (type, damage, order, visibility and Required counts
     || !html.includes('id="removeAllCategoriesButton"')
     || !html.includes('id="removeAllActionsButton"')
     || !html.includes('id="removeAllCategoriesActionsButton"')) {
-  fail('v4.26.1 settings-only profile/template/cleanup UI contract is incomplete');
+  fail('v4.27 settings-only profile/template/cleanup UI contract is incomplete');
 }
 
 if (app.includes('profileSwitcher')
@@ -291,6 +293,20 @@ if (!deleteAccountApi.includes("password_verify($password")
 
 if (/questionable|suspiciously/i.test(html) || /suspiciously/i.test(manifest)) {
   fail('Retired user-facing questionable/suspiciously copy returned');
+}
+
+if (/resistance/i.test(html)
+    || html.includes('id="resistanceBuildupInput"')
+    || app.includes('CATEGORY_RESISTANCE')
+    || app.includes('categoryResistanceForCount')
+    || app.includes('getCategoryEfficiency')) {
+  fail('Removed category Resistance mechanic or UI returned');
+}
+
+if (!app.includes('const ITEM_DROP_CHANCE = 0.50;')
+    || html.includes('40% chance')
+    || !html.includes('<strong>MAKE IT YOURS.</strong>')) {
+  fail('v4.27 loot chance or onboarding guidance is incomplete');
 }
 
 const settingsCss = read('settings.css');
