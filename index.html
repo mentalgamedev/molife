@@ -9,12 +9,12 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="preload" href="fonts/PunkKid.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=4.26.1">
-  <link rel="stylesheet" href="pawnshop.css?v=4.26.1">
-  <link rel="stylesheet" href="mood.css?v=4.26.1">
-  <link rel="stylesheet" href="metrics.css?v=4.26.1">
-  <link rel="stylesheet" href="settings.css?v=4.26.1">
-  <link rel="stylesheet" href="info.css?v=4.26.1">
+  <link rel="stylesheet" href="styles.css?v=4.27">
+  <link rel="stylesheet" href="pawnshop.css?v=4.27">
+  <link rel="stylesheet" href="mood.css?v=4.27">
+  <link rel="stylesheet" href="metrics.css?v=4.27">
+  <link rel="stylesheet" href="settings.css?v=4.27">
+  <link rel="stylesheet" href="info.css?v=4.27">
 </head>
 <body>
   <div class="city-noise" aria-hidden="true"></div>
@@ -33,7 +33,7 @@
       <div class="brand-block">
         <h1 class="brand-title" aria-label="MoLife"><span class="brand-mo">Mo</span><span class="brand-life">Life</span><span class="brand-tm">™</span></h1>
         <div class="brand-subline"><strong>Daily Struggle Assistant</strong><span> · powered by MoThink-6.7</span></div>
-        <div class="app-version" aria-label="MoLife version 4.26.1">v4.26.1 · Department of Vertical Integration</div>
+        <div class="app-version" aria-label="MoLife version 4.27">v4.27 · Office of Retroactive Productivity</div>
         <div id="todayLabel" class="muted"></div>
       </div>
       <div class="topbar-actions">
@@ -98,7 +98,7 @@
             <h2>Track-o-Tron</h2>
             <div class="track-subtitle">Choose an attack</div>
           </div>
-          <div class="balance-note">Mark one category FOCUSED · repeated category attacks build resistance</div>
+          <div class="balance-note">Mark one category FOCUSED · focused Actions deliberately hit less hard</div>
         </section>
 
         <section id="categoriesGrid" class="categories-grid"></section>
@@ -137,7 +137,7 @@
           <div>
             <div class="eyebrow">PHAT ED'S TOTALLY LEGITIMATE INVENTORY</div>
             <h2>Phat Ed's Pawnshop</h2>
-            <div id="arsenalStatus" class="arsenal-status">Empty. Win fights for a chance to acquire dubious merchandise.</div>
+            <div id="arsenalStatus" class="arsenal-status">Empty. Win fights and see what Phat Ed turns up.</div>
           </div>
           <div id="arsenalCount" class="arsenal-count">0 / 8 ITEMS</div>
         </div>
@@ -149,7 +149,7 @@
             <small>Tap to inspect suspicious package</small>
           </button>
         </div>
-        <div id="lootDropMessage" class="loot-drop-message" role="status" aria-live="polite">Each victory has a 40% chance to attract one dubious item while you have room.</div>
+        <div id="lootDropMessage" class="loot-drop-message" role="status" aria-live="polite" hidden></div>
         <div id="arsenalList" class="inventory-grid" role="group" aria-label="Pawnshop inventory"></div>
         <div class="arsenal-note">Carry up to 8 items. Better items are rarer; better condition is rarer. Items are consumed when used, and a lethal Pawnshop item can punch through Tenacious. Unopened crates are automatically stashed at day rollover.</div>
       </section>
@@ -242,7 +242,8 @@
 
       <div class="info-steps">
         <p><strong>DO THINGS.</strong> Tap matching Actions to deal damage. Defeat the Doppelgänger to win the day and earn XP.</p>
-        <p><strong>MIX IT UP.</strong> Repeating one category builds Resistance. Focus means that category deliberately takes more effort.</p>
+        <p><strong>MAKE IT YOURS.</strong> Edit or create Actions and categories in Settings so MoLife reflects the goals you actually want to work on.</p>
+        <p><strong>PICK A PRIORITY.</strong> Mark one category FOCUSED to make that area deliberately require more effort.</p>
         <p><strong>NEED A LIGHTER DAY?</strong> Chill Mode boosts normal Action damage. Mood tracking is optional and only records a day when you set it.</p>
       </div>
 
@@ -464,16 +465,9 @@
         <label class="field-row">
           <span>
             <strong>Focused category factor</strong>
-            <small>The one category marked FOCUSED divides its action damage by this factor. The same factor also slows resistance buildup there, so focused work stays useful for longer.</small>
+            <small>The one category marked FOCUSED divides its Action damage by this factor. Higher values make that priority require more real activity.</small>
           </span>
           <input id="focusFactorInput" type="number" min="1" max="10" step="0.05" value="1.5" inputmode="decimal">
-        </label>
-        <label class="field-row">
-          <span>
-            <strong>Resistance buildup</strong>
-            <small>Controls how quickly repeated actions lose damage. 0 = no resistance, 1 = normal resistance, higher values make resistance stronger. Focus reduces the effect.</small>
-          </span>
-          <input id="resistanceBuildupInput" type="number" min="0" max="2" step="0.05" value="0.75" inputmode="decimal">
         </label>
         <label class="field-row chill-mode-row">
           <span>
@@ -646,7 +640,7 @@
           <button id="importTemplateButton" class="secondary-button" type="button">Import template</button>
           <input id="importTemplateInput" type="file" accept=".json,application/json" hidden>
         </div>
-        <p class="category-fallback-note">Templates include enemy HP, Focus/Resistance/Chill tuning, categories/colors, Actions (type, damage, order, visibility and Required counts), and combos (multipliers and sequences). They do not include One-offs, Level, Street Cred, streak/fight history, mood history, current-fight data, Pawnshop items or onboarding state.</p>
+        <p class="category-fallback-note">Templates include enemy HP, Focus/Chill tuning, categories/colors, Actions (type, damage, order, visibility and Required counts), and combos (multipliers and sequences). They do not include One-offs, Level, Street Cred, streak/fight history, mood history, current-fight data, Pawnshop items or onboarding state.</p>
         <div id="templateStatus" class="template-status" role="status" aria-live="polite"></div>
       </section>
 
@@ -689,14 +683,6 @@
           <div class="category-score"></div>
         </div>
       </div>
-      <div class="efficiency-row">
-        <div class="efficiency-copy">
-          <span class="efficiency-label">Next action damage</span>
-          <strong class="efficiency-value">100%</strong>
-        </div>
-        <div class="category-meter"><div class="category-meter-fill"></div></div>
-        <div class="efficiency-next"></div>
-      </div>
       <div class="action-deck"><div class="actions-list"></div></div>
       <div class="one-off-tools">
         <button class="one-off-toggle" type="button">+ ONE-OFF</button>
@@ -713,8 +699,8 @@
     </article>
   </template>
 
-  <script src="app.js?v=4.26.1" defer></script>
-  <script src="metrics-viewer.js?v=4.26.1" defer></script>
-  <script src="cloud.js?v=4.26.1" defer></script>
+  <script src="app.js?v=4.27" defer></script>
+  <script src="metrics-viewer.js?v=4.27" defer></script>
+  <script src="cloud.js?v=4.27" defer></script>
 </body>
 </html>
