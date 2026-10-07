@@ -128,7 +128,9 @@ const retiredSelectors = [
   '.progression-grid',
   '.weapon-card',
   '.inventory-detail',
-  '.weight-row'
+  '.weight-row',
+  '.efficiency-row',
+  '.category-meter'
 ];
 const expectedDefaultDamage = new Map([
   ['wellbeing-workout-30', 30],
