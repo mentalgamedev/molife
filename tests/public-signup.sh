@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
+# Surface the failing assertion and PHP server error instead of an opaque exit 1.
+trap 'status=$?; echo "Public signup test failed at line $LINENO (exit $status)" >&2; tail -n 55 "${SERVER_LOG:-/tmp/molife-php-server.log}" >&2 || true; exit "$status"' ERR
 
 ORIGIN="http://127.0.0.1:8080"
 MAIL_SINK="/tmp/molife-mail-sink.jsonl"
