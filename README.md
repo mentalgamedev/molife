@@ -487,7 +487,7 @@ State schema remains **v13** and no SQL migration is required.
 
 ## v4.28 — Bureau of Missing Packets
 
-Cloud synchronization now drains an in-flight save and any subsequent queued edits before signing out, instead of abandoning a write that has not yet completed. New-account initialization and state migration use the same serialized save queue. Users receive an explicit local-copy warning if pending changes cannot be uploaded before sign-out.
+Cloud synchronization now drains an in-flight save and any subsequent queued edits before signing out, instead of abandoning a write that has not yet completed. Failed uploads now preserve newer edits made while the failed request was in flight, rather than restoring an outdated snapshot. New-account initialization and state migration use the same serialized save queue. Users receive an explicit local-copy warning if pending changes cannot be uploaded before sign-out.
 
 Cloud refresh responses are ignored when a local edit, save, session change, or newer revision occurred while the request was pending. Late responses from a previous signed-in account cannot overwrite the current account's cloud revision or local state. Account deletion no longer uploads data that will immediately be deleted.
 
