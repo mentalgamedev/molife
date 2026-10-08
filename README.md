@@ -485,6 +485,16 @@ Pawnshop victory loot now rolls at **50%** instead of 40%. The app no longer adv
 
 State schema remains **v13** and no SQL migration is required.
 
+## v4.28 — Bureau of Missing Packets
+
+Cloud synchronization now drains an in-flight save and any subsequent queued edits before signing out, instead of abandoning a write that has not yet completed. New-account initialization and state migration use the same serialized save queue. Users receive an explicit local-copy warning if pending changes cannot be uploaded before sign-out.
+
+Cloud refresh responses are ignored when a local edit, save, session change, or newer revision occurred while the request was pending. Late responses from a previous signed-in account cannot overwrite the current account's cloud revision or local state. Account deletion no longer uploads data that will immediately be deleted.
+
+Profile/category changes now discard unused per-category scroll offsets, and profile switching, Settings closure and reset release active drag-reorder listeners. The reset confirmation correctly refers to all profiles, rather than the retired three-profile arrangement.
+
+New deterministic cloud-sync race tests run in CI alongside existing frontend and PHP checks. State schema remains **v13**; no SQL migration is required.
+
 ## Self-hosting
 
 See [DEPLOY.md](DEPLOY.md) for the provider-neutral self-hosting guide.
