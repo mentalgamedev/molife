@@ -16,6 +16,15 @@ const ASSETS = [
   './fonts/PunkKid.ttf'
 ];
 
+// Only versioned application assets belong in CacheStorage; arbitrary same-origin
+// GETs (including cache-busted URLs) must not grow the cache without a limit.
+const APP_PATH = new URL('./', self.registration.scope).pathname;
+const INDEX_PATH = new URL('./index.html', self.registration.scope).pathname;
+const STATIC_ASSET_URLS = new Set(
+  ASSETS.filter(asset => asset !== './' && asset !== './index.html')
+    .map(asset => new URL(asset, self.registration.scope).href)
+);
+
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)));
   self.skipWaiting();
@@ -24,7 +33,7 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys => Promise.all(
-      keys.filter(key => key !== CACHE).map(key => caches.delete(key))
+      keys.filter(key => key.startsWith('molife-') && key !== CACHE).map(key => caches.delete(key))
     ))
   );
   self.clients.claim();
@@ -43,6 +52,8 @@ self.addEventListener('fetch', event => {
   }
 
   if (request.mode === 'navigate') {
+    // Do not overwrite our offline app shell with another route's HTML.
+    if (url.pathname !== APP_PATH && url.pathname !== INDEX_PATH) return;
     event.respondWith(
       fetch(request)
         .then(response => {
@@ -56,6 +67,8 @@ self.addEventListener('fetch', event => {
     );
     return;
   }
+
+  if (!STATIC_ASSET_URLS.has(url.href)) return;
 
   event.respondWith(
     caches.match(request).then(cached => {
