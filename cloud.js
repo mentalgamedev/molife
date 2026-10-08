@@ -1121,14 +1121,12 @@
       window.DalliApp.replaceState(remote.state, storageKey);
 
       if (remoteVersion !== window.DalliApp.stateVersion) {
-        try {
-          await saveNow(window.DalliApp.getState());
-          if (activationGeneration !== sessionGeneration) return;
-          setSyncStatus(`MoLife v${window.DalliApp.stateVersion} state migrated · synced`, 'ok');
-        } catch (error) {
-          if (activationGeneration !== sessionGeneration) return;
-          handleSaveError(error, window.DalliApp.getState());
-        }
+        // Use the same serialized queue as ordinary edits. A user can already
+        // interact with the page while this initial migration upload runs.
+        queueSave(window.DalliApp.getState());
+        const saved = await flushSave();
+        if (activationGeneration !== sessionGeneration) return;
+        if (saved) setSyncStatus(`MoLife v${window.DalliApp.stateVersion} state migrated · synced`, 'ok');
       } else {
         setSyncStatus('Synced', 'ok');
       }
@@ -1159,12 +1157,10 @@
     cloudReady = true;
 
     try {
-      await saveNow(window.DalliApp.getState());
+      queueSave(window.DalliApp.getState());
+      const saved = await flushSave();
       if (activationGeneration !== sessionGeneration) return;
-      setSyncStatus('Synced', 'ok');
-    } catch (error) {
-      if (activationGeneration !== sessionGeneration) return;
-      handleSaveError(error, window.DalliApp.getState());
+      if (saved) setSyncStatus('Synced', 'ok');
     } finally {
       if (activationGeneration === sessionGeneration) window.DalliApp.completeStartup?.();
     }
