@@ -3219,6 +3219,11 @@
       const list = card.querySelector('.actions-list');
       if (list) categoryScrollPositions.set(card.dataset.categoryId, list.scrollTop);
     });
+    // Do not retain scroll offsets for categories removed or absent in a new profile.
+    const validCategoryIds = new Set(activeSettings().categories.map(category => category.id));
+    for (const id of categoryScrollPositions.keys()) {
+      if (!validCategoryIds.has(id)) categoryScrollPositions.delete(id);
+    }
     els.categoriesGrid.replaceChildren();
 
     const visibleCategories = activeSettings().categories.filter(category => {
@@ -3687,6 +3692,8 @@
   }
 
   function loadActiveProfileIntoSettings({ announce = true } = {}) {
+    // Switching profiles replaces editor nodes; release active document-wide drag listeners.
+    if (actionDrag) finishActionDrag({ cancelled: true });
     settingsDraft = deepClone(activeSettings());
     settingsDraft.categories = ensureUncategorizedCategory(settingsDraft.categories);
     settingsDraft.combos = Array.isArray(settingsDraft.combos) ? settingsDraft.combos : [];
@@ -5012,6 +5019,7 @@
   }
 
   function closeSettings() {
+    if (actionDrag) finishActionDrag({ cancelled: true });
     if (!settingsDraft) {
       els.settingsDialog.close();
       return;
@@ -5027,10 +5035,11 @@
 
   function resetGameData() {
     const confirmed = window.confirm(
-      'Reset ALL MoLife game data?\n\nThis wipes all three profiles, categories, actions, One-offs, combos, Pawnshop items, mood history, fight history, Level, Street Cred and streaks. Your login/account remains.\n\nThe Crestfallen Department of Records will pretend none of this ever happened.'
+      'Reset ALL MoLife game data?\n\nThis wipes all profiles, categories, actions, One-offs, combos, Pawnshop items, mood history, fight history, Level, Street Cred and streaks. Your login/account remains.\n\nThe Crestfallen Department of Records will pretend none of this ever happened.'
     );
     if (!confirmed) return;
 
+    if (actionDrag) finishActionDrag({ cancelled: true });
     const infoSeen = state.onboarding?.infoSeen === true;
     state = freshState();
     state.onboarding.infoSeen = infoSeen;
