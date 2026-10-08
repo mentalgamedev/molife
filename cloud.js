@@ -1126,7 +1126,7 @@
         queueSave(window.DalliApp.getState());
         const saved = await flushSave();
         if (activationGeneration !== sessionGeneration) return;
-        if (saved) setSyncStatus(`MoLife v${window.DalliApp.stateVersion} state migrated · synced`, 'ok');
+        if (saved && !queuedState) setSyncStatus(`MoLife v${window.DalliApp.stateVersion} state migrated · synced`, 'ok');
       } else {
         setSyncStatus('Synced', 'ok');
       }
@@ -1160,7 +1160,7 @@
       queueSave(window.DalliApp.getState());
       const saved = await flushSave();
       if (activationGeneration !== sessionGeneration) return;
-      if (saved) setSyncStatus('Synced', 'ok');
+      if (saved && !queuedState) setSyncStatus('Synced', 'ok');
     } finally {
       if (activationGeneration === sessionGeneration) window.DalliApp.completeStartup?.();
     }
@@ -1218,7 +1218,9 @@
       return;
     }
 
-    queuedState = snapshot;
+    // The user may have queued a newer edit while the failed request was pending.
+    // Never replace that newer full-state snapshot with the older failed one.
+    if (!queuedState) queuedState = snapshot;
     setSyncStatus('Local · retrying', 'warning');
     clearTimeout(retryTimer);
     retryTimer = setTimeout(() => {
@@ -1241,7 +1243,7 @@
       try {
         const saved = await saveNow(snapshot);
         if (generation !== sessionGeneration || !saved) return false;
-        setSyncStatus('Synced', 'ok');
+        setSyncStatus(queuedState ? 'Saving…' : 'Synced', queuedState ? 'busy' : 'ok');
         return true;
       } catch (error) {
         if (generation === sessionGeneration) handleSaveError(error, snapshot);
