@@ -68,6 +68,12 @@ if (uncachedAssets.length) {
   fail(`CSS/JS assets missing from service-worker cache: ${uncachedAssets.join(', ')}`);
 }
 
+if (!serviceWorker.includes('STATIC_ASSET_URLS.has(url.href)')
+    || !serviceWorker.includes('key.startsWith(\'molife-\')')
+    || !serviceWorker.includes('url.pathname !== APP_PATH && url.pathname !== INDEX_PATH')) {
+  fail('Service worker must restrict caching to known MoLife assets and app shell routes');
+}
+
 function bracesBalanced(source) {
   let depth = 0;
   let quote = '';
