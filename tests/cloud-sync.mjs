@@ -111,6 +111,17 @@ function tick() {
   assert.equal(h.statuses.some(status => status.label === 'Synced'), false);
 }
 
+// A failed old upload must not replace a newer state queued during the request.
+{
+  const h = harness();
+  h.queueSave({ marker: 'old snapshot' });
+  const first = h.flushSave();
+  h.queueSave({ marker: 'newer snapshot' });
+  h.requests[0].reject(new Error('Temporary outage'));
+  assert.equal(await first, false);
+  assert.equal(h.snapshot().queuedState.marker, 'newer snapshot');
+}
+
 // Failed requests must retain the unsynced snapshot instead of losing it.
 {
   const h = harness();
@@ -122,4 +133,4 @@ function tick() {
   assert.equal(h.statuses.at(-1).kind, 'warning');
 }
 
-console.log('Cloud sync race tests passed: serial writes, stale pulls, session fences, offline retries.');
+console.log('Cloud sync race tests passed: serial writes, stale pulls, session fences, newer queued edits, offline retries.');
