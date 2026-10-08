@@ -18,7 +18,10 @@
   let saveTimer = null;
   let retryTimer = null;
   let saving = false;
+  let inFlightSave = null;
   let queuedState = null;
+  // Responses from an old login must never mutate a different session.
+  let sessionGeneration = 0;
   let registrationMode = 'unknown';
   let publicSignupReady = false;
   const capturedAuthTokens = captureAuthTokens();
@@ -883,32 +886,44 @@
   }
 
   async function signOut() {
-    if (!user) return;
-
+    if (!user || signOutButton.disabled) return;
+    signOutButton.disabled = true;
     try {
-      await flushSave();
-      await apiRequest('logout.php', {
-        method: 'POST',
-        headers: { 'X-CSRF-Token': csrfToken },
-        body: JSON.stringify({})
-      });
-    } catch (error) {
-      if (!window.confirm('MoLife could not confirm sign-out with the server. Sign out on this device anyway?')) {
-        return;
-      }
-    }
+      // An in-flight save must finish, followed by any edits queued during it.
+      const synced = await flushPendingSaves();
+      if (!synced && !window.confirm(
+        'Some changes could not be synced. Your local account copy is still saved on this device. Sign out anyway?'
+      )) return;
 
-    user = null;
-    csrfToken = '';
-    revision = 0;
-    cloudReady = false;
-    conflict = false;
-    queuedState = null;
-    clearTimeout(saveTimer);
-    clearTimeout(retryTimer);
-    window.DalliApp.useStorageKey(window.DalliApp.guestStorageKey);
-    setSignedOutUi();
-    accountDialog.close();
+      try {
+        await apiRequest('logout.php', {
+          method: 'POST',
+          headers: { 'X-CSRF-Token': csrfToken },
+          body: JSON.stringify({})
+        });
+      } catch (error) {
+        if (!window.confirm('MoLife could not confirm sign-out with the server. Sign out on this device anyway?')) {
+          return;
+        }
+      }
+
+      sessionGeneration += 1;
+      user = null;
+      csrfToken = '';
+      revision = 0;
+      cloudReady = false;
+      conflict = false;
+      queuedState = null;
+      saving = false;
+      inFlightSave = null;
+      clearTimeout(saveTimer);
+      clearTimeout(retryTimer);
+      window.DalliApp.useStorageKey(window.DalliApp.guestStorageKey);
+      setSignedOutUi();
+      accountDialog.close();
+    } finally {
+      signOutButton.disabled = false;
+    }
   }
 
   async function deleteAccount() {
@@ -940,7 +955,7 @@
     accountMessage.textContent = 'Deleting account…';
 
     try {
-      await flushSave();
+      // Deletion needs no extra upload of the data about to be deleted.
       await apiRequest('delete-account.php', {
         method: 'POST',
         headers: { 'X-CSRF-Token': csrfToken },
@@ -952,8 +967,10 @@
 
       clearTimeout(saveTimer);
       clearTimeout(retryTimer);
+      sessionGeneration += 1;
       queuedState = null;
       saving = false;
+      inFlightSave = null;
       conflict = false;
       cloudReady = false;
       revision = 0;
@@ -1073,6 +1090,11 @@
   }
 
   async function activateSession(session, options = {}) {
+    const activationGeneration = ++sessionGeneration;
+    clearTimeout(saveTimer);
+    clearTimeout(retryTimer);
+    saving = false;
+    inFlightSave = null;
     user = session.user;
     csrfToken = session.csrfToken;
     revision = 0;
@@ -1087,6 +1109,7 @@
       method: 'POST',
       body: JSON.stringify({ operation: 'read' })
     });
+    if (activationGeneration !== sessionGeneration) return;
 
     const storageKey = userStorageKey(user.id);
     const cachedUserState = window.DalliApp.readStoredState(storageKey);
@@ -1100,8 +1123,10 @@
       if (remoteVersion !== window.DalliApp.stateVersion) {
         try {
           await saveNow(window.DalliApp.getState());
+          if (activationGeneration !== sessionGeneration) return;
           setSyncStatus(`MoLife v${window.DalliApp.stateVersion} state migrated · synced`, 'ok');
         } catch (error) {
+          if (activationGeneration !== sessionGeneration) return;
           handleSaveError(error, window.DalliApp.getState());
         }
       } else {
@@ -1135,28 +1160,37 @@
 
     try {
       await saveNow(window.DalliApp.getState());
+      if (activationGeneration !== sessionGeneration) return;
       setSyncStatus('Synced', 'ok');
     } catch (error) {
+      if (activationGeneration !== sessionGeneration) return;
       handleSaveError(error, window.DalliApp.getState());
     } finally {
-      window.DalliApp.completeStartup?.();
+      if (activationGeneration === sessionGeneration) window.DalliApp.completeStartup?.();
     }
   }
 
   async function saveNow(snapshot) {
-    if (!user || !cloudReady || conflict) return;
+    if (!user || !cloudReady || conflict) return false;
 
+    const generation = sessionGeneration;
+    const savingUserId = user.id;
+    const expectedRevision = revision;
+    const token = csrfToken;
     const response = await apiRequest('state.php', {
       method: 'POST',
-      headers: { 'X-CSRF-Token': csrfToken },
+      headers: { 'X-CSRF-Token': token },
       body: JSON.stringify({
         operation: 'save',
         state: snapshot,
-        expectedRevision: revision
+        expectedRevision
       })
     });
 
+    // Late responses must not assign an old account's revision to a new one.
+    if (generation !== sessionGeneration || user?.id !== savingUserId) return false;
     revision = response.revision;
+    return true;
   }
 
   function handleConflict(error) {
@@ -1196,27 +1230,48 @@
     }, RETRY_DELAY_MS);
   }
 
-  async function flushSave() {
+  function flushSave() {
     clearTimeout(saveTimer);
-
-    if (!user || !cloudReady || conflict || saving || !queuedState) return;
+    if (saving) return inFlightSave || Promise.resolve(false);
+    if (!user || !cloudReady || conflict || !queuedState) return Promise.resolve(false);
 
     const snapshot = queuedState;
+    const generation = sessionGeneration;
     queuedState = null;
     saving = true;
     setSyncStatus('Syncing…', 'busy');
 
-    try {
-      await saveNow(snapshot);
-      setSyncStatus('Synced', 'ok');
-    } catch (error) {
-      handleSaveError(error, snapshot);
-    } finally {
-      saving = false;
-      if (queuedState && !conflict) {
-        saveTimer = setTimeout(flushSave, SAVE_DELAY_MS);
+    inFlightSave = (async () => {
+      try {
+        const saved = await saveNow(snapshot);
+        if (generation !== sessionGeneration || !saved) return false;
+        setSyncStatus('Synced', 'ok');
+        return true;
+      } catch (error) {
+        if (generation === sessionGeneration) handleSaveError(error, snapshot);
+        return false;
+      } finally {
+        if (generation === sessionGeneration) {
+          saving = false;
+          inFlightSave = null;
+          if (queuedState && !conflict) {
+            saveTimer = setTimeout(flushSave, SAVE_DELAY_MS);
+          }
+        }
       }
+    })();
+    return inFlightSave;
+  }
+
+  async function flushPendingSaves() {
+    clearTimeout(saveTimer);
+    clearTimeout(retryTimer);
+    if (saving && inFlightSave && !await inFlightSave) return false;
+    while (queuedState && !conflict) {
+      if (!await flushSave()) return false;
+      clearTimeout(saveTimer);
     }
+    return !conflict && !saving && !queuedState && cloudReady;
   }
 
   function queueSave(snapshot) {
@@ -1230,12 +1285,18 @@
 
   async function pullCloudState() {
     if (!user || !cloudReady || conflict || saving || queuedState) return;
+    const generation = sessionGeneration;
+    const readingUserId = user.id;
+    const readingRevision = revision;
 
     try {
       const remote = await apiRequest('state.php', {
         method: 'POST',
         body: JSON.stringify({ operation: 'read' })
       });
+      // Do not overwrite newer local edits, saves, or a newly signed-in account.
+      if (generation !== sessionGeneration || user?.id !== readingUserId
+          || !cloudReady || conflict || saving || queuedState || revision !== readingRevision) return;
 
       if (remote.state && remote.revision > revision) {
         revision = remote.revision;
@@ -1243,7 +1304,7 @@
       }
       setSyncStatus('Synced', 'ok');
     } catch (error) {
-      setSyncStatus('Local · offline', 'warning');
+      if (generation === sessionGeneration) setSyncStatus('Local · offline', 'warning');
     }
   }
 
