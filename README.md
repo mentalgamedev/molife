@@ -505,6 +505,16 @@ Today's fight now displays a prominent, responsive cumulative DAMAGE DEALT score
 
 This release changes no saved state or schema.
 
+## v4.30 — Department of Responsible Checkmarks
+
+Adds an optional, independent Meds Tracker directly below Mood. Each profile has configurable medication entries, with a name and optional dose/time label. Every entry is a once-per-day manual check-off showing the logged time; an explicit Undo is available on the same day. For multiple daily administrations, configure separate entries. No dose calculation, scheduling, automatic reminders, diagnosis or medical guidance is provided.
+
+Taken entries are shared daily account state and follow dated history, even when profile settings switch, medications are renamed, or definitions are later removed. Recent days show a disclosure with medication names, saved dose labels and timestamps. Medications do not create action/combo events, damage, XP or victory progress.
+
+Actions and Medications editors are collapsible in Settings so mobile users don't have to scroll through the entire Actions editor just to configure other sections. Medication definitions are included in profile Settings Templates; actual taken records are excluded. The panel explains that these records are part of locally saved/synced account data.
+
+State schema advances **v13 → v14**, with compatible client migrations and matching strict server-side validation. No SQL migration is required. Existing v13 accounts and templates preserve all previous settings and progression.
+
 ## Self-hosting
 
 See [DEPLOY.md](DEPLOY.md) for the provider-neutral self-hosting guide.

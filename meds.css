@@ -1,0 +1,113 @@
+/* MoLife v4.30 — Department of Responsible Checkmarks */
+.meds-panel {
+  margin: 0 0 18px;
+  padding: 20px 22px;
+  border: 1px solid rgba(66, 199, 178, .28);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(26, 88, 90, .19), rgba(9, 24, 29, .50)), var(--panel);
+}
+.meds-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-bottom: 14px;
+}
+.meds-head .eyebrow { color: #81c8c4; }
+.meds-head h2 { margin: 4px 0 0; font-size: 1.2rem; }
+.meds-status {
+  color: #9be9d2;
+  font-size: .69rem;
+  letter-spacing: .08em;
+  text-align: right;
+}
+.meds-list { display: grid; gap: 9px; }
+.medication-row { display: flex; align-items: stretch; gap: 8px; min-width: 0; }
+.medication-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1 1 auto;
+  gap: 12px;
+  min-width: 0;
+  min-height: 55px;
+  padding: 11px 13px;
+  border: 1px solid rgba(96, 216, 189, .32);
+  border-radius: 12px;
+  background: linear-gradient(90deg, rgba(50, 149, 136, .17), rgba(16, 49, 63, .35));
+  color: #e9fdf7;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.medication-action:hover:not(:disabled), .medication-action:focus-visible {
+  border-color: #70ddbd;
+  background: linear-gradient(90deg, rgba(49, 169, 140, .26), rgba(20, 73, 83, .45));
+}
+.medication-action:disabled {
+  opacity: 1;
+  cursor: default;
+  background: rgba(32, 120, 96, .11);
+  border-color: rgba(80, 194, 151, .23);
+}
+.medication-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.medication-info strong { font-size: .86rem; overflow-wrap: anywhere; }
+.medication-info small { color: #9bc1b8; font-size: .73rem; overflow-wrap: anywhere; }
+.medication-taken-label {
+  flex: 0 0 auto;
+  color: #84edc9;
+  font-size: .68rem;
+  font-weight: 900;
+  letter-spacing: .055em;
+  white-space: nowrap;
+}
+.medication-row.is-taken .medication-taken-label::before { content: '✓ '; }
+.medication-undo {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid rgba(130, 201, 180, .24);
+  border-radius: 10px;
+  background: rgba(63, 127, 112, .13);
+  color: #b1e6d3;
+  font: inherit;
+  font-size: .74rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.meds-note, .meds-empty {
+  margin: 10px 0 0;
+  color: #a2bcb8;
+  font-size: .73rem;
+  line-height: 1.5;
+}
+.history-medications {
+  margin: 0 0 9px;
+  padding: 5px 12px 9px;
+  border: 1px solid rgba(87, 193, 165, .16);
+  border-radius: 9px;
+  background: rgba(32, 119, 102, .06);
+}
+.history-medications summary {
+  color: #8fd9c6;
+  font-size: .7rem;
+  cursor: pointer;
+}
+.history-medications ul {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: #c1dfd4;
+  font-size: .74rem;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 620px) {
+  .meds-panel { padding: 15px 13px; }
+  .meds-head { align-items: flex-start; }
+  .meds-status { text-align: left; }
+  .medication-row { flex-wrap: wrap; }
+  .medication-action { flex-wrap: wrap; gap: 6px 12px; }
+  .medication-taken-label { white-space: normal; }
+  .medication-undo { margin-left: auto; }
+}

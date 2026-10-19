@@ -1,7 +1,8 @@
 (() => {
   'use strict';
 
-  const STATE_VERSION = 13;
+  const STATE_VERSION = 14;
+  const MEDICATION_LIMIT = 32;
   const LEGACY_TEMPLATE_VERSION = 1;
   const TEMPLATE_VERSION = 2;
   const DEFAULT_PROFILE_ID = 'profile-default';
@@ -226,7 +227,8 @@
         { id: 'chores-laundry', categoryId: 'chores', name: 'Laundry', baseDamage: 15, type: 'once', trackVisible: true, requiredForVictory: false, requiredCount: 1 },
         { id: 'chores-big', categoryId: 'chores', name: 'Big chore / deep clean', baseDamage: 30, type: 'repeatable', trackVisible: true, requiredForVictory: false, requiredCount: 1 }
       ],
-      combos: []
+      combos: [],
+      medications: []
     };
 
   const DEFAULT_STATE = {
@@ -259,6 +261,7 @@
       date: '',
       maxHp: 0,
       transactions: [],
+      medicationsTaken: [],
       comboProgress: {},
       requiredActions: [],
       defeatedAt: null,
@@ -294,6 +297,9 @@
     moodSlider: document.querySelector('#moodSlider'),
     moodValue: document.querySelector('#moodValue'),
     moodStatus: document.querySelector('#moodStatus'),
+    medsPanel: document.querySelector('#medsPanel'),
+    medsList: document.querySelector('#medsList'),
+    medsStatus: document.querySelector('#medsStatus'),
     combosPanel: document.querySelector('#combosPanel'),
     arsenalPanel: document.querySelector('#arsenalPanel'),
     arsenalList: document.querySelector('#arsenalList'),
@@ -385,6 +391,10 @@
     newCategoryColor: document.querySelector('#newCategoryColor'),
     addCategoryButton: document.querySelector('#addCategoryButton'),
     actionsEditor: document.querySelector('#actionsEditor'),
+    medicationsEditor: document.querySelector('#medicationsEditor'),
+    newMedicationName: document.querySelector('#newMedicationName'),
+    newMedicationDose: document.querySelector('#newMedicationDose'),
+    addMedicationButton: document.querySelector('#addMedicationButton'),
     actionSortSelect: document.querySelector('#actionSortSelect'),
     newActionName: document.querySelector('#newActionName'),
     newActionCategory: document.querySelector('#newActionCategory'),
@@ -1067,6 +1077,12 @@
     return migrated;
   }
 
+  function migrateV13State(candidate) {
+    const migrated = deepClone(candidate);
+    migrated.version = STATE_VERSION;
+    return migrated;
+  }
+
   function normalizeMetrics(value) {
     const source = value?.daily && typeof value.daily === 'object' && !Array.isArray(value.daily)
       ? value.daily
@@ -1183,6 +1199,22 @@
       };
     });
 
+    const medicationIds = new Set();
+    settings.medications = (Array.isArray(source.medications) ? source.medications : [])
+      .slice(0, MEDICATION_LIMIT)
+      .map((medication, index) => {
+        let id = String(medication?.id || '').slice(0, 64);
+        if (!/^[A-Za-z0-9_-]{1,64}$/.test(id) || medicationIds.has(id)) {
+          id = makeId('med');
+        }
+        medicationIds.add(id);
+        return {
+          id,
+          name: String(medication?.name || `Medication ${index + 1}`).trim().slice(0, 80),
+          dose: String(medication?.dose || '').trim().slice(0, 80)
+        };
+      });
+
     const normalizedActionIds = new Set(settings.actions.map(action => action.id));
     const comboIds = new Set();
     const enabledSequences = new Set();
@@ -1227,6 +1259,7 @@
     if (candidate?.version === 10) candidate = migrateV10State(candidate);
     if (candidate?.version === 11) candidate = migrateV11State(candidate);
     if (candidate?.version === 12) candidate = migrateV12State(candidate);
+    if (candidate?.version === 13) candidate = migrateV13State(candidate);
     if (candidate?.version === STATE_VERSION && !candidate.profiles && candidate.settings) {
       candidate = migrateLegacySettingsToProfiles(candidate);
     }
@@ -1325,6 +1358,7 @@
       ? clampInt(candidate.current?.maxHp, 20, 1000, getEnemyHp(activeSettings(next)))
       : 0;
     next.current.transactions = normalizeTransactions(candidate.current?.transactions);
+    next.current.medicationsTaken = normalizeMedicationRecords(candidate.current?.medicationsTaken);
     const currentActionIds = new Set(activeSettings(next).actions.map(action => action.id));
     const rawRequiredActions = Array.isArray(candidate.current?.requiredActions)
       ? candidate.current.requiredActions
@@ -1370,6 +1404,25 @@
     if (value === null || value === undefined || value === '') return null;
     const n = Number(value);
     return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
+  }
+
+  function normalizeMedicationRecords(value) {
+    if (!Array.isArray(value)) return [];
+    const used = new Set();
+    return value.slice(0, MEDICATION_LIMIT).map(item => {
+      const id = String(item?.id || '').slice(0, 128);
+      const medicationId = String(item?.medicationId || '').slice(0, 64);
+      const takenAt = normalizeTimestamp(item?.takenAt);
+      if (!id || !/^[A-Za-z0-9_-]{1,64}$/.test(medicationId) || !takenAt || used.has(medicationId)) return null;
+      used.add(medicationId);
+      return {
+        id,
+        medicationId,
+        name: String(item?.name || 'Medication').slice(0, 80),
+        dose: String(item?.dose || '').slice(0, 80),
+        takenAt
+      };
+    }).filter(Boolean);
   }
 
   function normalizeTransactions(value) {
@@ -1476,7 +1529,8 @@
       combosLanded: clampInt(day?.combosLanded, 0, 10000, 0),
       overkill: clampInt(day?.overkill, 0, 100000, Math.max(0, damage - maxHp)),
       dayCard: normalizeDayCard(day?.dayCard),
-      transactions: normalizeTransactions(day?.transactions)
+      transactions: normalizeTransactions(day?.transactions),
+      medicationsTaken: normalizeMedicationRecords(day?.medicationsTaken)
     };
   }
 
@@ -1496,7 +1550,7 @@
       const raw = localStorage.getItem(storageKey);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      if (!parsed || ![2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, STATE_VERSION].includes(parsed.version)) return null;
+      if (!parsed || ![2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, STATE_VERSION].includes(parsed.version)) return null;
       return normalizeState(parsed);
     } catch (error) {
       console.warn('Could not read cached MoLife data:', error);
@@ -2016,6 +2070,87 @@
   }
 
 
+  function medicationTakenEntry(medicationId) {
+    return (state.current.medicationsTaken || []).find(entry => entry.medicationId === medicationId) || null;
+  }
+
+  function markMedicationTaken(medicationId) {
+    ensureToday();
+    const med = activeSettings().medications.find(item => item.id === medicationId);
+    if (!med || medicationTakenEntry(medicationId) || state.current.medicationsTaken.length >= MEDICATION_LIMIT) return;
+    state.current.medicationsTaken.push({
+      id: makeId('med-tx'),
+      medicationId: med.id,
+      name: med.name,
+      dose: med.dose,
+      takenAt: Date.now()
+    });
+    saveState();
+    render();
+  }
+
+  function undoMedicationTaken(medicationId) {
+    ensureToday();
+    const before = state.current.medicationsTaken.length;
+    state.current.medicationsTaken = state.current.medicationsTaken.filter(entry => entry.medicationId !== medicationId);
+    if (state.current.medicationsTaken.length === before) return;
+    saveState();
+    render();
+  }
+
+  function renderMedicationTracker() {
+    if (!els.medsPanel || !els.medsList) return;
+    const medications = activeSettings().medications;
+    els.medsList.replaceChildren();
+    const takenCount = medications.filter(med => Boolean(medicationTakenEntry(med.id))).length;
+    els.medsStatus.textContent = medications.length
+      ? 'TODAY · ' + takenCount + ' / ' + medications.length + ' MARKED TAKEN'
+      : 'NO MEDICATIONS CONFIGURED';
+    if (!medications.length) {
+      const empty = document.createElement('p');
+      empty.className = 'meds-empty';
+      empty.textContent = 'Add medication entries in Settings to start tracking your day.';
+      els.medsList.append(empty);
+      return;
+    }
+
+    medications.forEach(med => {
+      const entry = medicationTakenEntry(med.id);
+      const row = document.createElement('div');
+      row.className = 'medication-row' + (entry ? ' is-taken' : '');
+      const mark = document.createElement('button');
+      mark.type = 'button';
+      mark.className = 'medication-action';
+      mark.disabled = Boolean(entry);
+      mark.setAttribute('aria-label', entry ? med.name + ' already marked taken today' : 'Mark ' + med.name + ' as taken');
+      const info = document.createElement('span');
+      info.className = 'medication-info';
+      const name = document.createElement('strong');
+      name.textContent = entry ? entry.name : med.name;
+      const dose = document.createElement('small');
+      dose.textContent = (entry ? entry.dose : med.dose) || 'Daily entry';
+      info.append(name, dose);
+      const status = document.createElement('span');
+      status.className = 'medication-taken-label';
+      status.textContent = entry
+        ? 'TAKEN ' + new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(new Date(entry.takenAt))
+        : 'MARK TAKEN';
+      mark.append(info, status);
+      mark.addEventListener('click', () => markMedicationTaken(med.id));
+      row.append(mark);
+      if (entry) {
+        const undo = document.createElement('button');
+        undo.type = 'button';
+        undo.className = 'medication-undo';
+        undo.textContent = 'Undo';
+        undo.setAttribute('aria-label', "Undo today's taken entry for " + med.name);
+        undo.addEventListener('click', () => undoMedicationTaken(med.id));
+        row.append(undo);
+      }
+      els.medsList.append(row);
+    });
+  }
+
   function archiveCurrentDay() {
     if (!state.current.date) return;
 
@@ -2037,7 +2172,8 @@
       combosLanded: summary.combosLanded,
       overkill: summary.overkill,
       dayCard: state.current.dayCard,
-      transactions: deepClone(state.current.transactions)
+      transactions: deepClone(state.current.transactions),
+      medicationsTaken: deepClone(state.current.medicationsTaken || [])
     };
 
     updateArchivedStreak(record);
@@ -2060,6 +2196,7 @@
         date: today,
         maxHp: getEnemyHp(),
         transactions: [],
+        medicationsTaken: [],
         comboProgress: {},
         requiredActions: requiredActionsForNextFight(),
         defeatedAt: null,
@@ -2078,6 +2215,7 @@
       date: today,
       maxHp: getEnemyHp(),
       transactions: [],
+      medicationsTaken: [],
       comboProgress: {},
       requiredActions: requiredActionsForNextFight(),
       defeatedAt: null,
@@ -2748,6 +2886,7 @@
 
     renderHero(summary);
     renderMoodTracker();
+    renderMedicationTracker();
     renderProgression();
     renderPawnshop(summary, options.lootClaimed?.id || '');
     renderCategories(summary);
@@ -3620,6 +3759,22 @@
       row.append(date, score);
       if (day.dayCard) row.addEventListener('click', () => openDayCard(day.dayCard));
       els.historyList.append(row);
+      const medicationLog = Array.isArray(day.medicationsTaken) ? day.medicationsTaken : [];
+      if (medicationLog.length) {
+        const details = document.createElement('details');
+        details.className = 'history-medications';
+        const heading = document.createElement('summary');
+        heading.textContent = 'MEDS · ' + medicationLog.length + ' marked taken — view entries';
+        const list = document.createElement('ul');
+        medicationLog.forEach(entry => {
+          const item = document.createElement('li');
+          const time = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(new Date(entry.takenAt));
+          item.textContent = entry.name + (entry.dose ? ' · ' + entry.dose : '') + ' · ' + time;
+          list.append(item);
+        });
+        details.append(heading, list);
+        els.historyList.append(details);
+      }
     });
   }
 
@@ -3703,6 +3858,7 @@
     settingsDraft = deepClone(activeSettings());
     settingsDraft.categories = ensureUncategorizedCategory(settingsDraft.categories);
     settingsDraft.combos = Array.isArray(settingsDraft.combos) ? settingsDraft.combos : [];
+    settingsDraft.medications = Array.isArray(settingsDraft.medications) ? settingsDraft.medications : [];
     els.goalInput.value = settingsDraft.fullEnemyHp;
     els.focusFactorInput.value = clampNumber(settingsDraft.focusFactor, 1, 10, DEFAULT_FOCUS_FACTOR);
     els.chillModeInput.checked = settingsDraft.chillModeEnabled === true;
@@ -3727,6 +3883,7 @@
     updateGoalPreview();
     renderCategoriesEditor();
     renderActionsEditor();
+    renderMedicationsEditor();
     renderCombosEditor();
     populateCategorySelect();
   }
@@ -3918,6 +4075,7 @@
 
     renderCategoriesEditor();
     renderActionsEditor();
+    renderMedicationsEditor();
     renderCombosEditor();
     populateCategorySelect();
 
@@ -4215,6 +4373,68 @@
     els.settingsMessage.textContent = `Actions sorted by ${labels[mode]}.`;
   }
 
+
+  function renderMedicationsEditor() {
+    if (!els.medicationsEditor || !settingsDraft) return;
+    els.medicationsEditor.replaceChildren();
+    settingsDraft.medications.forEach(med => {
+      const row = document.createElement('div');
+      row.className = 'medication-editor-row medication-direct-editor';
+      const nameLabel = document.createElement('label');
+      const nameCaption = document.createElement('span');
+      nameCaption.textContent = 'Medication / entry';
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.maxLength = 80;
+      nameInput.value = med.name;
+      nameInput.addEventListener('input', () => { med.name = nameInput.value; });
+      nameLabel.append(nameCaption, nameInput);
+      const doseLabel = document.createElement('label');
+      const doseCaption = document.createElement('span');
+      doseCaption.textContent = 'Dose or time label (optional)';
+      const doseInput = document.createElement('input');
+      doseInput.type = 'text';
+      doseInput.maxLength = 80;
+      doseInput.value = med.dose;
+      doseInput.placeholder = 'e.g. morning / prescribed dose';
+      doseInput.addEventListener('input', () => { med.dose = doseInput.value; });
+      doseLabel.append(doseCaption, doseInput);
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'delete-action';
+      remove.textContent = '×';
+      remove.setAttribute('aria-label', 'Remove medication entry ' + med.name);
+      remove.addEventListener('click', () => {
+        settingsDraft.medications = settingsDraft.medications.filter(item => item.id !== med.id);
+        renderMedicationsEditor();
+        commitSettingsDraft();
+      });
+      row.append(nameLabel, doseLabel, remove);
+      els.medicationsEditor.append(row);
+    });
+    els.addMedicationButton.disabled = settingsDraft.medications.length >= MEDICATION_LIMIT;
+  }
+
+  function addMedicationFromForm() {
+    if (!settingsDraft) return;
+    const name = els.newMedicationName.value.trim().slice(0, 80);
+    const dose = els.newMedicationDose.value.trim().slice(0, 80);
+    if (!name) {
+      els.newMedicationName.focus();
+      els.settingsMessage.textContent = 'Enter a medication name or a recognizable label.';
+      return;
+    }
+    if (settingsDraft.medications.length >= MEDICATION_LIMIT) {
+      els.settingsMessage.textContent = 'Medication tracker is full (32 entries).';
+      return;
+    }
+    settingsDraft.medications.push({ id: makeId('med'), name, dose });
+    els.newMedicationName.value = '';
+    els.newMedicationDose.value = '';
+    renderMedicationsEditor();
+    commitSettingsDraft();
+    els.settingsMessage.textContent = 'Medication entry added. It has no effect on damage or XP.';
+  }
 
   function renderActionsEditor() {
     els.actionsEditor.replaceChildren();
@@ -4782,6 +5002,10 @@
       };
     });
 
+    if (settingsDraft.medications.some(med => !String(med.name || '').trim())) {
+      return { ok: false, message: 'Every medication entry needs a name.' };
+    }
+
     if (combos.some(combo => !combo.name)) {
       return { ok: false, message: 'Every combo needs a name.' };
     }
@@ -4818,7 +5042,12 @@
         ).toFixed(2)),
         categories,
         actions,
-        combos
+        combos,
+        medications: settingsDraft.medications.slice(0, MEDICATION_LIMIT).map(med => ({
+          id: String(med.id).slice(0, 64),
+          name: String(med.name || '').trim().slice(0, 80),
+          dose: String(med.dose || '').trim().slice(0, 80)
+        }))
       }
     };
   }
@@ -4963,7 +5192,7 @@
     window.setTimeout(() => URL.revokeObjectURL(href), 1000);
 
     if (els.templateStatus) {
-      els.templateStatus.textContent = `${activeProfileName()} exported. One-offs, progression, fight/mood history, current-fight data, Pawnshop inventory and onboarding state were intentionally excluded.`;
+      els.templateStatus.textContent = `${activeProfileName()} exported. One-offs, progression, fight/mood and medication-taken history, current-fight data, Pawnshop inventory and onboarding state were intentionally excluded.`;
     }
   }
 
@@ -4977,7 +5206,7 @@
       const legacyTemplate = payload.version === LEGACY_TEMPLATE_VERSION;
 
       const confirmed = window.confirm(
-        'Switch to this MoLife settings template?\n\nThis replaces enemy HP, Focus/Chill tuning, categories/colors, Actions (type, damage, visibility, Required counts and order), and combos (multipliers and sequences). Your One-offs, progression, fight/mood history, today’s recorded damage and locked HP, Pawnshop items and onboarding state stay untouched.'
+        'Switch to this MoLife settings template?\n\nThis replaces enemy HP, Focus/Chill tuning, categories/colors, Actions (type, damage, visibility, Required counts and order), medication definitions, and combos (multipliers and sequences). Your One-offs, progression, fight/mood and medication-taken history, today’s recorded damage and locked HP, Pawnshop items and onboarding state stay untouched.'
       );
       if (!confirmed) return;
 
@@ -4999,6 +5228,7 @@
       updateGoalPreview();
       renderCategoriesEditor();
       renderActionsEditor();
+      renderMedicationsEditor();
       renderCombosEditor();
       populateCategorySelect();
       render();
@@ -5041,7 +5271,7 @@
 
   function resetGameData() {
     const confirmed = window.confirm(
-      'Reset ALL MoLife game data?\n\nThis wipes all profiles, categories, actions, One-offs, combos, Pawnshop items, mood history, fight history, Level, Street Cred and streaks. Your login/account remains.\n\nThe Crestfallen Department of Records will pretend none of this ever happened.'
+      'Reset ALL MoLife game data?\n\nThis wipes all profiles, categories, actions, medication entries and history, One-offs, combos, Pawnshop items, mood history, fight history, Level, Street Cred and streaks. Your login/account remains.\n\nThe Crestfallen Department of Records will pretend none of this ever happened.'
     );
     if (!confirmed) return;
 
@@ -5053,6 +5283,7 @@
       date: localDateKey(),
       maxHp: getEnemyHp(),
       transactions: [],
+      medicationsTaken: [],
       comboProgress: {},
       requiredActions: requiredActionsForNextFight(),
       defeatedAt: null,
@@ -5138,7 +5369,7 @@
       || target === els.focusFactorInput
       || target === els.chillModeInput
       || target === els.chillMultiplierInput
-      || target.closest?.('.category-direct-editor, .action-direct-editor, .combo-direct-editor');
+      || target.closest?.('.category-direct-editor, .action-direct-editor, .combo-direct-editor, .medication-direct-editor');
 
     if (target === els.chillModeInput) syncChillSettingsControls();
     if (editsExistingSetting) {
@@ -5153,7 +5384,7 @@
       || target === els.focusFactorInput
       || target === els.chillModeInput
       || target === els.chillMultiplierInput
-      || target.closest?.('.category-direct-editor, .action-direct-editor, .combo-direct-editor')) {
+      || target.closest?.('.category-direct-editor, .action-direct-editor, .combo-direct-editor, .medication-direct-editor')) {
       scheduleSettingsSave(0);
     }
   });
@@ -5180,6 +5411,7 @@
   els.newActionType?.addEventListener('change', syncNewActionRequirementControls);
   els.newActionRequired?.addEventListener('change', syncNewActionRequirementControls);
   els.addActionButton.addEventListener('click', addActionFromForm);
+  els.addMedicationButton?.addEventListener('click', addMedicationFromForm);
   els.addComboButton?.addEventListener('click', addComboFromForm);
   els.lootCrateButton?.addEventListener('click', claimVictoryLoot);
   els.closePawnshopItemButton?.addEventListener('click', closePawnshopItemDialog);

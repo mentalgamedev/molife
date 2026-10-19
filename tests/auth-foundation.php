@@ -209,6 +209,44 @@ $validatedV13Five = dalli_validate_state($v13Five);
 test_assert(count($validatedV13Five['profiles']['slots'] ?? []) === 5, 'v13 should allow up to five profiles');
 test_assert(($validatedV13Five['profiles']['activeId'] ?? null) === 'profile-extra-4', 'v13 should allow any stored profile to be active');
 
+$v14State = $v13Single;
+$v14State['version'] = 14;
+$v14State['profiles']['slots'][0]['settings']['medications'] = [
+    ['id' => 'med-morning', 'name' => 'Morning entry', 'dose' => 'prescribed label'],
+    ['id' => 'med-evening', 'name' => 'Evening entry', 'dose' => ''],
+];
+$v14State['current']['medicationsTaken'] = [[
+    'id' => 'med-tx-test',
+    'medicationId' => 'med-morning',
+    'name' => 'Morning entry',
+    'dose' => 'prescribed label',
+    'takenAt' => 1790000000000,
+]];
+$v14State['history'] = [];
+$validatedV14 = dalli_validate_state($v14State);
+test_assert($validatedV14['version'] === 14, 'v14 state with medication definitions should validate');
+test_assert(count($validatedV14['current']['medicationsTaken']) === 1, 'v14 taken record should be retained in current state');
+test_assert($validatedV14['profiles']['slots'][0]['settings']['medications'][0]['dose'] === 'prescribed label', 'Medication label should persist');
+
+$v14State['history'] = [[
+    'date' => '2026-01-01',
+    'damage' => 0,
+    'baseDamage' => 0,
+    'maxHp' => 100,
+    'won' => false,
+    'categoryDamage' => [],
+    'categoryBaseDamage' => [],
+    'defeatedAt' => null,
+    'victoryXp' => 0,
+    'combosLanded' => 0,
+    'overkill' => 0,
+    'dayCard' => null,
+    'transactions' => [],
+    'medicationsTaken' => $v14State['current']['medicationsTaken'],
+]];
+$archivedV14 = dalli_validate_state($v14State);
+test_assert(count($archivedV14['history'][0]['medicationsTaken']) === 1, 'Archived taken medication should survive v14 validation');
+
 $pdo = dalli_pdo();
 test_assert(dalli_send_registration_admin_notification($pdo, 'nobody', 'nobody@example.test') === false, 'disabled admin notification should be a no-op even without mail transport');
 test_assert(dalli_auth_schema_ready($pdo), 'modern auth schema should be detected');

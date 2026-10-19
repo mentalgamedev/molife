@@ -2005,6 +2005,100 @@ function dalli_validate_state_v13(mixed $state): array
 }
 
 
+
+function dalli_validate_medication_entries(mixed $entries): void
+{
+    if (!is_array($entries) || !array_is_list($entries) || count($entries) > 32) {
+        dalli_fail('Invalid medication log.', 422);
+    }
+    $seen = [];
+    foreach ($entries as $entry) {
+        if (!is_array($entry)
+            || !dalli_keys_allowed($entry, ['id', 'medicationId', 'name', 'dose', 'takenAt'])
+            || !is_string($entry['id'] ?? null)
+            || preg_match('/^[A-Za-z0-9_-]{1,128}$/', $entry['id']) !== 1
+            || !is_string($entry['medicationId'] ?? null)
+            || preg_match('/^[A-Za-z0-9_-]{1,64}$/', $entry['medicationId']) !== 1
+            || !dalli_string_ok($entry['name'] ?? null, 1, 80)
+            || !is_string($entry['dose'] ?? null)
+            || strlen($entry['dose']) > 80
+            || (!is_int($entry['takenAt'] ?? null) && !is_float($entry['takenAt'] ?? null))
+            || !is_finite((float) $entry['takenAt'])
+            || $entry['takenAt'] <= 0
+            || $entry['takenAt'] > 1000000000000000
+            || isset($seen[$entry['medicationId']])) {
+            dalli_fail('Invalid medication log entry.', 422);
+        }
+        $seen[$entry['medicationId']] = true;
+    }
+}
+
+function dalli_validate_state_v14(mixed $state): array
+{
+    if (!is_array($state)
+        || ($state['version'] ?? null) !== 14
+        || !dalli_keys_allowed($state, [
+            'version', 'profiles', 'progression', 'current', 'history',
+            'inventory', 'oneOffs', 'metrics', 'onboarding'
+        ])) {
+        dalli_fail('Unsupported MoLife state.', 422);
+    }
+
+    $slots = $state['profiles']['slots'] ?? null;
+    if (!is_array($slots) || !array_is_list($slots) || count($slots) < 1 || count($slots) > 5) {
+        dalli_fail('Invalid profiles.', 422);
+    }
+    foreach ($slots as $slot) {
+        $medications = $slot['settings']['medications'] ?? null;
+        if (!is_array($medications) || !array_is_list($medications) || count($medications) > 32) {
+            dalli_fail('Invalid medication definitions.', 422);
+        }
+        $seen = [];
+        foreach ($medications as $medication) {
+            if (!is_array($medication)
+                || !dalli_keys_allowed($medication, ['id', 'name', 'dose'])
+                || !is_string($medication['id'] ?? null)
+                || preg_match('/^[A-Za-z0-9_-]{1,64}$/', $medication['id']) !== 1
+                || isset($seen[$medication['id']])
+                || !dalli_string_ok($medication['name'] ?? null, 1, 80)
+                || !is_string($medication['dose'] ?? null)
+                || strlen($medication['dose']) > 80) {
+                dalli_fail('Invalid medication definition.', 422);
+            }
+            $seen[$medication['id']] = true;
+        }
+    }
+
+    dalli_validate_medication_entries($state['current']['medicationsTaken'] ?? null);
+    if (!is_array($state['history'] ?? null)) {
+        dalli_fail('Invalid medication history.', 422);
+    }
+    foreach ($state['history'] as $day) {
+        dalli_validate_medication_entries($day['medicationsTaken'] ?? null);
+    }
+
+    // Keep one canonical validator for all existing combat, progression and
+    // profile rules: strip only the new v14 fields before using the v13 rules.
+    $legacy = $state;
+    $legacy['version'] = 13;
+    foreach ($legacy['profiles']['slots'] as &$slot) {
+        unset($slot['settings']['medications']);
+    }
+    unset($slot);
+    unset($legacy['current']['medicationsTaken']);
+    foreach ($legacy['history'] as &$day) {
+        unset($day['medicationsTaken']);
+    }
+    unset($day);
+    dalli_validate_state_v13($legacy);
+
+    $encoded = json_encode($state, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($encoded === false || strlen($encoded) > DALLI_MAX_BODY_BYTES) {
+        dalli_fail('MoLife state is too large.', 413);
+    }
+    return $state;
+}
+
 function dalli_validate_state(mixed $state): array
 {
     $version = is_array($state) ? ($state['version'] ?? null) : null;
@@ -2014,6 +2108,7 @@ function dalli_validate_state(mixed $state): array
     if ($version === 5 || $version === 6 || $version === 7 || $version === 8 || $version === 9 || $version === 10 || $version === 11) return dalli_validate_state_v5_v11($state);
     if ($version === 12) return dalli_validate_state_v12($state);
     if ($version === 13) return dalli_validate_state_v13($state);
+    if ($version === 14) return dalli_validate_state_v14($state);
     dalli_fail('Unsupported Dalli state.', 422);
 }
 

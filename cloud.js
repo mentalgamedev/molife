@@ -1084,9 +1084,11 @@
     const hasItems = Array.isArray(candidate.inventory?.items)
       && candidate.inventory.items.some(item => item?.id !== STARTER_ITEM_INSTANCE_ID);
     const hasOneOffs = Array.isArray(candidate.oneOffs) && candidate.oneOffs.length > 0;
+    const hasMedicationsTaken = Array.isArray(candidate.current?.medicationsTaken)
+      && candidate.current.medicationsTaken.length > 0;
     const customizedProfiles = JSON.stringify(candidate.profiles) !== JSON.stringify(fresh.profiles);
 
-    return hasTransactions || hasHistory || hasItems || hasOneOffs || customizedProfiles;
+    return hasTransactions || hasHistory || hasItems || hasOneOffs || hasMedicationsTaken || customizedProfiles;
   }
 
   async function activateSession(session, options = {}) {

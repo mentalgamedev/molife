@@ -9,12 +9,13 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="preload" href="fonts/PunkKid.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=4.29">
-  <link rel="stylesheet" href="pawnshop.css?v=4.29">
-  <link rel="stylesheet" href="mood.css?v=4.29">
-  <link rel="stylesheet" href="metrics.css?v=4.29">
-  <link rel="stylesheet" href="settings.css?v=4.29">
-  <link rel="stylesheet" href="info.css?v=4.29">
+  <link rel="stylesheet" href="styles.css?v=4.30">
+  <link rel="stylesheet" href="pawnshop.css?v=4.30">
+  <link rel="stylesheet" href="mood.css?v=4.30">
+  <link rel="stylesheet" href="meds.css?v=4.30">
+  <link rel="stylesheet" href="metrics.css?v=4.30">
+  <link rel="stylesheet" href="settings.css?v=4.30">
+  <link rel="stylesheet" href="info.css?v=4.30">
 </head>
 <body>
   <div class="city-noise" aria-hidden="true"></div>
@@ -33,7 +34,7 @@
       <div class="brand-block">
         <h1 class="brand-title" aria-label="MoLife"><span class="brand-mo">Mo</span><span class="brand-life">Life</span><span class="brand-tm">™</span></h1>
         <div class="brand-subline"><strong>Daily Struggle Assistant</strong><span> · powered by MoThink-6.7</span></div>
-        <div class="app-version" aria-label="MoLife version 4.29">v4.29 · Damage Assessment Department</div>
+        <div class="app-version" aria-label="MoLife version 4.30">v4.30 · Department of Responsible Checkmarks</div>
         <div id="todayLabel" class="muted"></div>
       </div>
       <div class="topbar-actions">
@@ -137,6 +138,18 @@
             <p class="mood-note">Untouched days are not recorded. Move the slider again any time today to update the reading.</p>
             <button class="mood-trends-button" type="button" data-open-metric="mood">View trend</button>
           </div>
+        </section>
+
+        <section id="medsPanel" class="meds-panel panel" aria-labelledby="medsHeading">
+          <div class="meds-head">
+            <div>
+              <div class="eyebrow">TRACK-O-TRON // PRIVATE DAILY LOG</div>
+              <h2 id="medsHeading">Meds Tracker</h2>
+            </div>
+            <strong id="medsStatus" class="meds-status">NO MEDICATIONS CONFIGURED</strong>
+          </div>
+          <div id="medsList" class="meds-list"></div>
+          <p class="meds-note">Records what you mark as taken; not a reminder or dosage guide. Edit your entries in Settings. Your history is stored with your MoLife data.</p>
         </section>
       </div>
 
@@ -252,7 +265,7 @@
         <p><strong>DO THINGS.</strong> Tap matching Actions to deal damage. Defeat the Doppelgänger to win the day and earn XP.</p>
         <p><strong>MAKE IT YOURS.</strong> Edit or create Actions and categories in Settings so MoLife reflects the goals you actually want to work on.</p>
         <p><strong>PICK A PRIORITY.</strong> Mark one category FOCUSED to make that area deliberately require more effort.</p>
-        <p><strong>NEED A LIGHTER DAY?</strong> Chill Mode boosts normal Action damage. Mood tracking is optional and only records a day when you set it.</p>
+        <p><strong>NEED A LIGHTER DAY?</strong> Chill Mode boosts normal Action damage. Mood and medication check-offs are optional. The Meds Tracker is a manual log, not medical advice or a reminder.</p>
       </div>
 
       <p class="info-reopen">You can reopen this briefing with the <strong>i</strong> button at any time.</p>
@@ -452,12 +465,12 @@
         <div class="settings-section-head">
           <div>
             <h3>Profiles</h3>
-            <p>Separate setups for different modes of life. Profiles use the same configuration data as Settings Templates: combat tuning, categories, Actions and combos.</p>
+            <p>Separate setups for different modes of life. Profiles use the same configuration data as Settings Templates: combat tuning, categories, Actions, medication entries and combos.</p>
           </div>
           <button id="addProfileButton" class="secondary-button" type="button">+ Add profile</button>
         </div>
         <div id="profilesEditor" class="profiles-editor"></div>
-        <p id="profileCountNote" class="category-fallback-note">Profiles are managed here only. You can keep up to 5. Progression, today’s fight, One-offs, mood/history, Pawnshop items and account data are shared.</p>
+        <p id="profileCountNote" class="category-fallback-note">Profiles are managed here only. You can keep up to 5. Progression, today’s fight, One-offs, mood and medication-taken history, Pawnshop items and account data are shared.</p>
       </section>
 
       <section class="settings-section daily-challenge-section">
@@ -542,7 +555,9 @@
             </select>
           </label>
         </div>
-        <div id="actionsEditor" class="actions-editor"></div>
+        <details id="actionsSettingsDetails" class="settings-accordion">
+          <summary class="settings-accordion-summary">Edit action entries <span>Show / hide list</span></summary>
+          <div id="actionsEditor" class="actions-editor"></div>
 
         <div class="add-action-card">
           <h4>Add action</h4>
@@ -587,8 +602,37 @@
           </div>
           <button id="addActionButton" class="secondary-button" type="button">+ Add action</button>
         </div>
+        </details>
       </section>
 
+
+      <section class="settings-section meds-settings-section">
+        <div class="settings-section-head">
+          <div>
+            <h3>Medications</h3>
+            <p>Optional daily check-offs, independent of damage and XP. Create a separate entry for each time of day if needed. Medication names and taken history are included in your saved/synced MoLife data.</p>
+          </div>
+        </div>
+        <details id="medicationsSettingsDetails" class="settings-accordion">
+          <summary class="settings-accordion-summary">Edit medication entries <span>Show / hide list</span></summary>
+          <div id="medicationsEditor" class="medications-editor"></div>
+          <div class="add-action-card add-medication-card">
+            <h4>Add medication entry</h4>
+            <div class="add-medication-grid">
+              <label>
+                <span>Name / recognizable label</span>
+                <input id="newMedicationName" type="text" maxlength="80" placeholder="e.g. Morning medication">
+              </label>
+              <label>
+                <span>Dose or time label (optional)</span>
+                <input id="newMedicationDose" type="text" maxlength="80" placeholder="e.g. evening / prescribed dose">
+              </label>
+            </div>
+            <button id="addMedicationButton" class="secondary-button" type="button">+ Add medication</button>
+            <p class="category-fallback-note">This is a manual log only, with no reminders or medication advice. Double-check medications against your actual prescribed instructions.</p>
+          </div>
+        </details>
+      </section>
 
       <section class="settings-section">
         <div class="settings-section-head">
@@ -648,7 +692,7 @@
           <button id="importTemplateButton" class="secondary-button" type="button">Import template</button>
           <input id="importTemplateInput" type="file" accept=".json,application/json" hidden>
         </div>
-        <p class="category-fallback-note">Templates include enemy HP, Focus/Chill tuning, categories/colors, Actions (type, damage, order, visibility and Required counts), and combos (multipliers and sequences). They do not include One-offs, Level, Street Cred, streak/fight history, mood history, current-fight data, Pawnshop items or onboarding state.</p>
+        <p class="category-fallback-note">Templates include enemy HP, Focus/Chill tuning, categories/colors, Actions (type, damage, order, visibility and Required counts), medication definitions, and combos (multipliers and sequences). They do not include One-offs, Level, Street Cred, streak/fight history, mood or medication-taken history, current-fight data, Pawnshop items or onboarding state.</p>
         <div id="templateStatus" class="template-status" role="status" aria-live="polite"></div>
       </section>
 
@@ -667,7 +711,7 @@
       <section class="settings-section danger-zone">
         <div>
           <h3>Fresh start</h3>
-          <p>Reset all game progress, all three profiles, categories, actions, One-offs, combos, Pawnshop items, mood history, Level, Street Cred and history. Your account/login remains untouched.</p>
+          <p>Reset all game progress, all profiles, categories, actions, medication entries, One-offs, combos, Pawnshop items, mood and medication history, Level, Street Cred and history. Your account/login remains untouched.</p>
         </div>
         <button id="resetGameButton" class="danger-button" type="button">Reset game data</button>
       </section>
@@ -707,8 +751,8 @@
     </article>
   </template>
 
-  <script src="app.js?v=4.29" defer></script>
-  <script src="metrics-viewer.js?v=4.29" defer></script>
-  <script src="cloud.js?v=4.29" defer></script>
+  <script src="app.js?v=4.30" defer></script>
+  <script src="metrics-viewer.js?v=4.30" defer></script>
+  <script src="cloud.js?v=4.30" defer></script>
 </body>
 </html>
