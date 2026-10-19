@@ -267,3 +267,26 @@
     width: 100%;
   }
 }
+
+/* v4.30 — Collapsible configuration editors */
+.settings-accordion { margin-top: 12px; border: 1px solid rgba(119,202,184,.20); border-radius: 12px; background: rgba(21,53,57,.10); }
+.settings-accordion[open] { padding-bottom: 12px; }
+.settings-accordion-summary { display:flex; align-items:center; justify-content:space-between; gap:14px; min-height:48px; padding:12px 14px; color:#b5f0d9; font-size:.85rem; font-weight:850; cursor:pointer; }
+.settings-accordion-summary span { color:#99aaa9; font-size:.69rem; font-weight:600; }
+.settings-accordion[open] > .settings-accordion-summary { margin-bottom:8px; border-bottom:1px solid rgba(119,202,184,.15); }
+.settings-accordion .actions-editor,.settings-accordion .medications-editor { padding:0 10px; }
+.settings-accordion .add-action-card { margin:12px 10px 0; }
+.medications-editor { display:grid; gap:8px; }
+.medication-editor-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto; align-items:end; gap:12px; padding:12px; border:1px solid rgba(80,178,161,.18); border-radius:12px; background:rgba(27,94,88,.08); }
+.medication-editor-row label,.add-medication-grid label { display:grid; gap:6px; min-width:0; }
+.medication-editor-row label span,.add-medication-grid label span { color:var(--muted); font-size:.70rem; }
+.medication-editor-row input,.add-medication-grid input { width:100%; min-width:0; }
+.add-medication-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.meds-settings-section .settings-section-head h3 { color:#98e5cd; }
+@media (max-width:760px) {
+  .medication-editor-row,.add-medication-grid { grid-template-columns:1fr; }
+  .medication-editor-row .delete-action { justify-self:end; min-height:40px; }
+  .settings-accordion-summary { flex-wrap:wrap; }
+  .settings-accordion .actions-editor,.settings-accordion .medications-editor { padding:0 4px; }
+  .settings-accordion .add-action-card { margin:10px 4px 0; }
+}
