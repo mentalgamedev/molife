@@ -497,6 +497,14 @@ Profile/category changes now discard unused per-category scroll offsets, and pro
 
 New deterministic cloud-sync race tests run in CI alongside existing frontend and PHP checks. State schema remains **v13**; no SQL migration is required.
 
+## v4.29 — Damage Assessment Department
+
+Action buttons automatically move below other, unused normal Actions after they have been logged today; repeatedly logged Actions remain ordered by last use. All Required Actions remain ahead of ordinary Actions, including those already completed. Original user-defined order is preserved before first execution. Undo recomputes the order from recorded transactions.
+
+Today's fight now displays a prominent, responsive cumulative DAMAGE DEALT scoreboard beside the Doppelgänger HP on wide screens, stacked compactly on mobile. The total keeps increasing after the enemy hits zero HP; overkill remains separately visible.
+
+This release changes no saved state or schema.
+
 ## Self-hosting
 
 See [DEPLOY.md](DEPLOY.md) for the provider-neutral self-hosting guide.
