@@ -1,7 +1,8 @@
 (() => {
   'use strict';
 
-  const STATE_VERSION = 13;
+  const STATE_VERSION = 14;
+  const MEDICATION_LIMIT = 32;
   const LEGACY_TEMPLATE_VERSION = 1;
   const TEMPLATE_VERSION = 2;
   const DEFAULT_PROFILE_ID = 'profile-default';
@@ -226,7 +227,8 @@
         { id: 'chores-laundry', categoryId: 'chores', name: 'Laundry', baseDamage: 15, type: 'once', trackVisible: true, requiredForVictory: false, requiredCount: 1 },
         { id: 'chores-big', categoryId: 'chores', name: 'Big chore / deep clean', baseDamage: 30, type: 'repeatable', trackVisible: true, requiredForVictory: false, requiredCount: 1 }
       ],
-      combos: []
+      combos: [],
+      medications: []
     };
 
   const DEFAULT_STATE = {
@@ -259,6 +261,7 @@
       date: '',
       maxHp: 0,
       transactions: [],
+      medicationsTaken: [],
       comboProgress: {},
       requiredActions: [],
       defeatedAt: null,
@@ -294,6 +297,9 @@
     moodSlider: document.querySelector('#moodSlider'),
     moodValue: document.querySelector('#moodValue'),
     moodStatus: document.querySelector('#moodStatus'),
+    medsPanel: document.querySelector('#medsPanel'),
+    medsList: document.querySelector('#medsList'),
+    medsStatus: document.querySelector('#medsStatus'),
     combosPanel: document.querySelector('#combosPanel'),
     arsenalPanel: document.querySelector('#arsenalPanel'),
     arsenalList: document.querySelector('#arsenalList'),
@@ -385,6 +391,10 @@
     newCategoryColor: document.querySelector('#newCategoryColor'),
     addCategoryButton: document.querySelector('#addCategoryButton'),
     actionsEditor: document.querySelector('#actionsEditor'),
+    medicationsEditor: document.querySelector('#medicationsEditor'),
+    newMedicationName: document.querySelector('#newMedicationName'),
+    newMedicationDose: document.querySelector('#newMedicationDose'),
+    addMedicationButton: document.querySelector('#addMedicationButton'),
     actionSortSelect: document.querySelector('#actionSortSelect'),
     newActionName: document.querySelector('#newActionName'),
     newActionCategory: document.querySelector('#newActionCategory'),
@@ -1067,6 +1077,12 @@
     return migrated;
   }
 
+  function migrateV13State(candidate) {
+    const migrated = deepClone(candidate);
+    migrated.version = STATE_VERSION;
+    return migrated;
+  }
+
   function normalizeMetrics(value) {
     const source = value?.daily && typeof value.daily === 'object' && !Array.isArray(value.daily)
       ? value.daily
@@ -1183,6 +1199,22 @@
       };
     });
 
+    const medicationIds = new Set();
+    settings.medications = (Array.isArray(source.medications) ? source.medications : [])
+      .slice(0, MEDICATION_LIMIT)
+      .map((medication, index) => {
+        let id = String(medication?.id || '').slice(0, 64);
+        if (!/^[A-Za-z0-9_-]{1,64}$/.test(id) || medicationIds.has(id)) {
+          id = makeId('med');
+        }
+        medicationIds.add(id);
+        return {
+          id,
+          name: String(medication?.name || `Medication ${index + 1}`).trim().slice(0, 80),
+          dose: String(medication?.dose || '').trim().slice(0, 80)
+        };
+      });
+
     const normalizedActionIds = new Set(settings.actions.map(action => action.id));
     const comboIds = new Set();
     const enabledSequences = new Set();
@@ -1227,6 +1259,7 @@
     if (candidate?.version === 10) candidate = migrateV10State(candidate);
     if (candidate?.version === 11) candidate = migrateV11State(candidate);
     if (candidate?.version === 12) candidate = migrateV12State(candidate);
+    if (candidate?.version === 13) candidate = migrateV13State(candidate);
     if (candidate?.version === STATE_VERSION && !candidate.profiles && candidate.settings) {
       candidate = migrateLegacySettingsToProfiles(candidate);
     }
@@ -1325,6 +1358,7 @@
       ? clampInt(candidate.current?.maxHp, 20, 1000, getEnemyHp(activeSettings(next)))
       : 0;
     next.current.transactions = normalizeTransactions(candidate.current?.transactions);
+    next.current.medicationsTaken = normalizeMedicationRecords(candidate.current?.medicationsTaken);
     const currentActionIds = new Set(activeSettings(next).actions.map(action => action.id));
     const rawRequiredActions = Array.isArray(candidate.current?.requiredActions)
       ? candidate.current.requiredActions
@@ -1370,6 +1404,25 @@
     if (value === null || value === undefined || value === '') return null;
     const n = Number(value);
     return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
+  }
+
+  function normalizeMedicationRecords(value) {
+    if (!Array.isArray(value)) return [];
+    const used = new Set();
+    return value.slice(0, MEDICATION_LIMIT).map(item => {
+      const id = String(item?.id || '').slice(0, 128);
+      const medicationId = String(item?.medicationId || '').slice(0, 64);
+      const takenAt = normalizeTimestamp(item?.takenAt);
+      if (!id || !/^[A-Za-z0-9_-]{1,64}$/.test(medicationId) || !takenAt || used.has(medicationId)) return null;
+      used.add(medicationId);
+      return {
+        id,
+        medicationId,
+        name: String(item?.name || 'Medication').slice(0, 80),
+        dose: String(item?.dose || '').slice(0, 80),
+        takenAt
+      };
+    }).filter(Boolean);
   }
 
   function normalizeTransactions(value) {
@@ -1476,7 +1529,8 @@
       combosLanded: clampInt(day?.combosLanded, 0, 10000, 0),
       overkill: clampInt(day?.overkill, 0, 100000, Math.max(0, damage - maxHp)),
       dayCard: normalizeDayCard(day?.dayCard),
-      transactions: normalizeTransactions(day?.transactions)
+      transactions: normalizeTransactions(day?.transactions),
+      medicationsTaken: normalizeMedicationRecords(day?.medicationsTaken)
     };
   }
 
@@ -2037,7 +2091,8 @@
       combosLanded: summary.combosLanded,
       overkill: summary.overkill,
       dayCard: state.current.dayCard,
-      transactions: deepClone(state.current.transactions)
+      transactions: deepClone(state.current.transactions),
+      medicationsTaken: deepClone(state.current.medicationsTaken || [])
     };
 
     updateArchivedStreak(record);
@@ -2060,6 +2115,7 @@
         date: today,
         maxHp: getEnemyHp(),
         transactions: [],
+        medicationsTaken: [],
         comboProgress: {},
         requiredActions: requiredActionsForNextFight(),
         defeatedAt: null,
@@ -2078,6 +2134,7 @@
       date: today,
       maxHp: getEnemyHp(),
       transactions: [],
+      medicationsTaken: [],
       comboProgress: {},
       requiredActions: requiredActionsForNextFight(),
       defeatedAt: null,
@@ -2748,6 +2805,7 @@
 
     renderHero(summary);
     renderMoodTracker();
+    renderMedicationTracker();
     renderProgression();
     renderPawnshop(summary, options.lootClaimed?.id || '');
     renderCategories(summary);
@@ -3703,6 +3761,7 @@
     settingsDraft = deepClone(activeSettings());
     settingsDraft.categories = ensureUncategorizedCategory(settingsDraft.categories);
     settingsDraft.combos = Array.isArray(settingsDraft.combos) ? settingsDraft.combos : [];
+    settingsDraft.medications = Array.isArray(settingsDraft.medications) ? settingsDraft.medications : [];
     els.goalInput.value = settingsDraft.fullEnemyHp;
     els.focusFactorInput.value = clampNumber(settingsDraft.focusFactor, 1, 10, DEFAULT_FOCUS_FACTOR);
     els.chillModeInput.checked = settingsDraft.chillModeEnabled === true;
@@ -3727,6 +3786,7 @@
     updateGoalPreview();
     renderCategoriesEditor();
     renderActionsEditor();
+    renderMedicationsEditor();
     renderCombosEditor();
     populateCategorySelect();
   }
@@ -3918,6 +3978,7 @@
 
     renderCategoriesEditor();
     renderActionsEditor();
+    renderMedicationsEditor();
     renderCombosEditor();
     populateCategorySelect();
 
@@ -4782,6 +4843,10 @@
       };
     });
 
+    if (settingsDraft.medications.some(med => !String(med.name || '').trim())) {
+      return { ok: false, message: 'Every medication entry needs a name.' };
+    }
+
     if (combos.some(combo => !combo.name)) {
       return { ok: false, message: 'Every combo needs a name.' };
     }
@@ -4818,7 +4883,12 @@
         ).toFixed(2)),
         categories,
         actions,
-        combos
+        combos,
+        medications: settingsDraft.medications.slice(0, MEDICATION_LIMIT).map(med => ({
+          id: String(med.id).slice(0, 64),
+          name: String(med.name || '').trim().slice(0, 80),
+          dose: String(med.dose || '').trim().slice(0, 80)
+        }))
       }
     };
   }
@@ -4999,6 +5069,7 @@
       updateGoalPreview();
       renderCategoriesEditor();
       renderActionsEditor();
+      renderMedicationsEditor();
       renderCombosEditor();
       populateCategorySelect();
       render();
@@ -5053,6 +5124,7 @@
       date: localDateKey(),
       maxHp: getEnemyHp(),
       transactions: [],
+      medicationsTaken: [],
       comboProgress: {},
       requiredActions: requiredActionsForNextFight(),
       defeatedAt: null,
@@ -5138,7 +5210,7 @@
       || target === els.focusFactorInput
       || target === els.chillModeInput
       || target === els.chillMultiplierInput
-      || target.closest?.('.category-direct-editor, .action-direct-editor, .combo-direct-editor');
+      || target.closest?.('.category-direct-editor, .action-direct-editor, .combo-direct-editor, .medication-direct-editor');
 
     if (target === els.chillModeInput) syncChillSettingsControls();
     if (editsExistingSetting) {
@@ -5153,7 +5225,7 @@
       || target === els.focusFactorInput
       || target === els.chillModeInput
       || target === els.chillMultiplierInput
-      || target.closest?.('.category-direct-editor, .action-direct-editor, .combo-direct-editor')) {
+      || target.closest?.('.category-direct-editor, .action-direct-editor, .combo-direct-editor, .medication-direct-editor')) {
       scheduleSettingsSave(0);
     }
   });
@@ -5180,6 +5252,7 @@
   els.newActionType?.addEventListener('change', syncNewActionRequirementControls);
   els.newActionRequired?.addEventListener('change', syncNewActionRequirementControls);
   els.addActionButton.addEventListener('click', addActionFromForm);
+  els.addMedicationButton?.addEventListener('click', addMedicationFromForm);
   els.addComboButton?.addEventListener('click', addComboFromForm);
   els.lootCrateButton?.addEventListener('click', claimVictoryLoot);
   els.closePawnshopItemButton?.addEventListener('click', closePawnshopItemDialog);
