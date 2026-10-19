@@ -191,18 +191,18 @@ if (!app.includes('baseDamage === damageMigration[0]')) {
   fail('Default-damage migration must only touch actions that still have their stock damage');
 }
 
-if (!app.includes('const STATE_VERSION = 13;')
+if (!app.includes('const STATE_VERSION = 14;')
     || !app.includes("const DEFAULT_PROFILE_ID = 'profile-default';")
     || !app.includes('const PROFILE_MIN = 1;')
     || !app.includes('const PROFILE_MAX = 5;')
     || !app.includes("name: 'Default'")
     || !app.includes('onboarding: {')
     || !app.includes('infoSeen: false')) {
-  fail('v13 dynamic-profile defaults are incomplete');
+  fail('v14 dynamic-profile defaults are incomplete');
 }
 
 if (app.includes('state.settings')) {
-  fail('v13 must not keep a second persistent state.settings source beside profile settings');
+  fail('v14 must not keep a second persistent state.settings source beside profile settings');
 }
 
 if (!app.includes('function normalizeSettings(')
@@ -217,7 +217,7 @@ if (!app.includes('sourceVersion >= 2 && sourceVersion < 11')
     || !app.includes('slice(0, PROFILE_MAX)')
     || !app.includes("activeId: DEFAULT_PROFILE_ID")
     || !app.includes('settings: deepClone(legacySettings)')) {
-  fail('v11/v12-to-v13 profile migration is incomplete');
+  fail('Profile migration is incomplete');
 }
 
 if (!app.includes('const LEGACY_TEMPLATE_VERSION = 1;')
@@ -231,6 +231,30 @@ if (!app.includes('[LEGACY_TEMPLATE_VERSION, TEMPLATE_VERSION].includes(payload.
   fail('Legacy template migration support is incomplete');
 }
 
+if (!app.includes('function migrateV13State(candidate)')
+    || !app.includes('function normalizeMedicationRecords(value)')
+    || !app.includes('next.current.medicationsTaken = normalizeMedicationRecords')
+    || !app.includes('medicationsTaken: deepClone(state.current.medicationsTaken || [])')
+    || !app.includes('function renderMedicationTracker()')
+    || !app.includes('function renderMedicationsEditor()')
+    || !app.includes('function markMedicationTaken(medicationId)')
+    || !app.includes('function undoMedicationTaken(medicationId)')
+    || !app.includes('renderMedicationsEditor();')) {
+  fail('v14 medication state, migration and renderer contracts are incomplete');
+}
+if (!html.includes('id="medsPanel"')
+    || !html.includes('id="medicationsEditor"')
+    || !html.includes('id="actionsSettingsDetails"')
+    || !html.includes('id="medicationsSettingsDetails"')
+    || !html.includes('id="newMedicationName"')
+    || !html.includes('id="newMedicationDose"')
+    || !html.includes('meds.css?v=4.30')) {
+  fail('v4.30 collapsible mobile editors or medication UI missing');
+}
+if (!serviceWorker.includes("'./meds.css?v=4.30'")) {
+  fail('Medication stylesheet is missing from offline app cache');
+}
+
 const expectedTemplateSettings = [
   'fullEnemyHp',
   'focusCategoryId',
@@ -240,7 +264,8 @@ const expectedTemplateSettings = [
   'chillMultiplier',
   'categories',
   'actions',
-  'combos'
+  'combos',
+  'medications'
 ];
 const buildSettingsStart = app.indexOf('function buildSettingsFromDraft()');
 const buildSettingsEnd = app.indexOf('function commitSettingsDraft', buildSettingsStart);
