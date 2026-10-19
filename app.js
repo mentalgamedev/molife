@@ -3282,14 +3282,20 @@
       }
 
       const originalOrder = new Map(activeSettings().actions.map((action, actionIndex) => [action.id, actionIndex]));
+      const lastUsedAt = new Map();
+      state.current.transactions.forEach((tx, index) => {
+        if (tx.type === 'action' && !tx.oneOff) lastUsedAt.set(tx.actionId, index + 1);
+      });
       const requirementRank = action => {
+        // Both completed and outstanding Required actions stay above normal actions.
         const progress = summary.requiredProgress[action.id];
-        if (!progress) return 2;
-        return progress.remainingCount > 0 ? 0 : 1;
+        if (progress) return progress.remainingCount > 0 ? 0 : 1;
+        return action.requiredForVictory ? 1 : 2;
       };
       const actions = activeSettings().actions
         .filter(action => action.categoryId === category.id && action.trackVisible !== false)
         .sort((a, b) => requirementRank(a) - requirementRank(b)
+          || (lastUsedAt.get(a.id) ?? 0) - (lastUsedAt.get(b.id) ?? 0)
           || (originalOrder.get(a.id) ?? 0) - (originalOrder.get(b.id) ?? 0));
 
       const oneOffs = state.oneOffs
