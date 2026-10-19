@@ -2126,9 +2126,9 @@
       const info = document.createElement('span');
       info.className = 'medication-info';
       const name = document.createElement('strong');
-      name.textContent = med.name;
+      name.textContent = entry ? entry.name : med.name;
       const dose = document.createElement('small');
-      dose.textContent = med.dose || 'Daily entry';
+      dose.textContent = (entry ? entry.dose : med.dose) || 'Daily entry';
       info.append(name, dose);
       const status = document.createElement('span');
       status.className = 'medication-taken-label';
@@ -5206,7 +5206,7 @@
       const legacyTemplate = payload.version === LEGACY_TEMPLATE_VERSION;
 
       const confirmed = window.confirm(
-        'Switch to this MoLife settings template?\n\nThis replaces enemy HP, Focus/Chill tuning, categories/colors, Actions (type, damage, visibility, Required counts and order), and combos (multipliers and sequences). Your One-offs, progression, fight/mood and medication-taken history, today’s recorded damage and locked HP, Pawnshop items and onboarding state stay untouched.'
+        'Switch to this MoLife settings template?\n\nThis replaces enemy HP, Focus/Chill tuning, categories/colors, Actions (type, damage, visibility, Required counts and order), medication definitions, and combos (multipliers and sequences). Your One-offs, progression, fight/mood and medication-taken history, today’s recorded damage and locked HP, Pawnshop items and onboarding state stay untouched.'
       );
       if (!confirmed) return;
 
