@@ -56,8 +56,17 @@
         </div>
 
         <div class="hero-copy">
-          <div class="fight-name">DARK DOPPELGÄNGER</div>
-          <h2 id="fightHeading"><span id="enemyHp">60</span><span class="hero-goal"> / <span id="enemyMaxHp">60</span> HP</span></h2>
+          <div class="fight-info-row">
+            <div class="fight-identity">
+              <div class="fight-name">DARK DOPPELGÄNGER</div>
+              <h2 id="fightHeading"><span id="enemyHp">60</span><span class="hero-goal"> / <span id="enemyMaxHp">60</span> HP</span></h2>
+            </div>
+            <div class="fight-damage-box" aria-label="Total damage dealt today">
+              <span>TOTAL DAMAGE DEALT</span>
+              <strong id="totalDamage">0</strong>
+              <small>ALL HITS COUNT, EVEN AFTER VICTORY</small>
+            </div>
+          </div>
 
           <div class="fight-hud">
             <div class="fight-hud-label">
@@ -74,7 +83,6 @@
           <div id="tenaciousStatus" class="tenacious-status" hidden></div>
 
           <div class="fight-stats" aria-label="Fight statistics">
-            <span><strong id="totalDamage">0</strong> DAMAGE DEALT</span>
             <span><strong id="overkillValue">0</strong> OVERKILL</span>
           </div>
           <p id="heroMessage" class="muted">Target standing. Make your moves and end the fight.</p>
