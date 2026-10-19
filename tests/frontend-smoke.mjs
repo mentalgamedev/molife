@@ -320,6 +320,13 @@ if (!settingsCss.includes('.profile-settings-section .settings-section-head {\n 
   fail('Mobile profile header must stack vertically instead of retaining the desktop flex row');
 }
 
+if (!app.includes('const lastUsedAt = new Map()')
+    || !app.includes('(lastUsedAt.get(a.id) ?? 0) - (lastUsedAt.get(b.id) ?? 0)')
+    || !html.includes('class="fight-damage-box"')
+    || html.match(/id="totalDamage"/g)?.length !== 1) {
+  fail('Damage board or last-used action ordering missing');
+}
+
 const mainCss = read('styles.css');
 if (mainCss.includes('.profile-switcher') || mainCss.includes('.profile-switch-button')) {
   fail('Main-screen profile switcher styles should be removed');

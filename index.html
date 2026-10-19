@@ -9,12 +9,12 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="preload" href="fonts/PunkKid.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=4.28">
-  <link rel="stylesheet" href="pawnshop.css?v=4.28">
-  <link rel="stylesheet" href="mood.css?v=4.28">
-  <link rel="stylesheet" href="metrics.css?v=4.28">
-  <link rel="stylesheet" href="settings.css?v=4.28">
-  <link rel="stylesheet" href="info.css?v=4.28">
+  <link rel="stylesheet" href="styles.css?v=4.29">
+  <link rel="stylesheet" href="pawnshop.css?v=4.29">
+  <link rel="stylesheet" href="mood.css?v=4.29">
+  <link rel="stylesheet" href="metrics.css?v=4.29">
+  <link rel="stylesheet" href="settings.css?v=4.29">
+  <link rel="stylesheet" href="info.css?v=4.29">
 </head>
 <body>
   <div class="city-noise" aria-hidden="true"></div>
@@ -33,7 +33,7 @@
       <div class="brand-block">
         <h1 class="brand-title" aria-label="MoLife"><span class="brand-mo">Mo</span><span class="brand-life">Life</span><span class="brand-tm">™</span></h1>
         <div class="brand-subline"><strong>Daily Struggle Assistant</strong><span> · powered by MoThink-6.7</span></div>
-        <div class="app-version" aria-label="MoLife version 4.28">v4.28 · Bureau of Missing Packets</div>
+        <div class="app-version" aria-label="MoLife version 4.29">v4.29 · Damage Assessment Department</div>
         <div id="todayLabel" class="muted"></div>
       </div>
       <div class="topbar-actions">
@@ -56,8 +56,17 @@
         </div>
 
         <div class="hero-copy">
-          <div class="fight-name">DARK DOPPELGÄNGER</div>
-          <h2 id="fightHeading"><span id="enemyHp">60</span><span class="hero-goal"> / <span id="enemyMaxHp">60</span> HP</span></h2>
+          <div class="fight-info-row">
+            <div class="fight-identity">
+              <div class="fight-name">DARK DOPPELGÄNGER</div>
+              <h2 id="fightHeading"><span id="enemyHp">60</span><span class="hero-goal"> / <span id="enemyMaxHp">60</span> HP</span></h2>
+            </div>
+            <div class="fight-damage-box" aria-label="Total damage dealt today">
+              <span>TOTAL DAMAGE DEALT</span>
+              <strong id="totalDamage">0</strong>
+              <small>ALL HITS COUNT, EVEN AFTER VICTORY</small>
+            </div>
+          </div>
 
           <div class="fight-hud">
             <div class="fight-hud-label">
@@ -74,7 +83,6 @@
           <div id="tenaciousStatus" class="tenacious-status" hidden></div>
 
           <div class="fight-stats" aria-label="Fight statistics">
-            <span><strong id="totalDamage">0</strong> DAMAGE DEALT</span>
             <span><strong id="overkillValue">0</strong> OVERKILL</span>
           </div>
           <p id="heroMessage" class="muted">Target standing. Make your moves and end the fight.</p>
@@ -699,8 +707,8 @@
     </article>
   </template>
 
-  <script src="app.js?v=4.28" defer></script>
-  <script src="metrics-viewer.js?v=4.28" defer></script>
-  <script src="cloud.js?v=4.28" defer></script>
+  <script src="app.js?v=4.29" defer></script>
+  <script src="metrics-viewer.js?v=4.29" defer></script>
+  <script src="cloud.js?v=4.29" defer></script>
 </body>
 </html>
