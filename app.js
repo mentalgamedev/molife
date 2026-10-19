@@ -1550,7 +1550,7 @@
       const raw = localStorage.getItem(storageKey);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      if (!parsed || ![2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, STATE_VERSION].includes(parsed.version)) return null;
+      if (!parsed || ![2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, STATE_VERSION].includes(parsed.version)) return null;
       return normalizeState(parsed);
     } catch (error) {
       console.warn('Could not read cached MoLife data:', error);
@@ -5192,7 +5192,7 @@
     window.setTimeout(() => URL.revokeObjectURL(href), 1000);
 
     if (els.templateStatus) {
-      els.templateStatus.textContent = `${activeProfileName()} exported. One-offs, progression, fight/mood history, current-fight data, Pawnshop inventory and onboarding state were intentionally excluded.`;
+      els.templateStatus.textContent = `${activeProfileName()} exported. One-offs, progression, fight/mood and medication-taken history, current-fight data, Pawnshop inventory and onboarding state were intentionally excluded.`;
     }
   }
 
@@ -5206,7 +5206,7 @@
       const legacyTemplate = payload.version === LEGACY_TEMPLATE_VERSION;
 
       const confirmed = window.confirm(
-        'Switch to this MoLife settings template?\n\nThis replaces enemy HP, Focus/Chill tuning, categories/colors, Actions (type, damage, visibility, Required counts and order), and combos (multipliers and sequences). Your One-offs, progression, fight/mood history, today’s recorded damage and locked HP, Pawnshop items and onboarding state stay untouched.'
+        'Switch to this MoLife settings template?\n\nThis replaces enemy HP, Focus/Chill tuning, categories/colors, Actions (type, damage, visibility, Required counts and order), and combos (multipliers and sequences). Your One-offs, progression, fight/mood and medication-taken history, today’s recorded damage and locked HP, Pawnshop items and onboarding state stay untouched.'
       );
       if (!confirmed) return;
 
@@ -5271,7 +5271,7 @@
 
   function resetGameData() {
     const confirmed = window.confirm(
-      'Reset ALL MoLife game data?\n\nThis wipes all profiles, categories, actions, One-offs, combos, Pawnshop items, mood history, fight history, Level, Street Cred and streaks. Your login/account remains.\n\nThe Crestfallen Department of Records will pretend none of this ever happened.'
+      'Reset ALL MoLife game data?\n\nThis wipes all profiles, categories, actions, medication entries and history, One-offs, combos, Pawnshop items, mood history, fight history, Level, Street Cred and streaks. Your login/account remains.\n\nThe Crestfallen Department of Records will pretend none of this ever happened.'
     );
     if (!confirmed) return;
 
