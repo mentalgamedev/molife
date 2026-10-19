@@ -2070,6 +2070,87 @@
   }
 
 
+  function medicationTakenEntry(medicationId) {
+    return (state.current.medicationsTaken || []).find(entry => entry.medicationId === medicationId) || null;
+  }
+
+  function markMedicationTaken(medicationId) {
+    ensureToday();
+    const med = activeSettings().medications.find(item => item.id === medicationId);
+    if (!med || medicationTakenEntry(medicationId) || state.current.medicationsTaken.length >= MEDICATION_LIMIT) return;
+    state.current.medicationsTaken.push({
+      id: makeId('med-tx'),
+      medicationId: med.id,
+      name: med.name,
+      dose: med.dose,
+      takenAt: Date.now()
+    });
+    saveState();
+    render();
+  }
+
+  function undoMedicationTaken(medicationId) {
+    ensureToday();
+    const before = state.current.medicationsTaken.length;
+    state.current.medicationsTaken = state.current.medicationsTaken.filter(entry => entry.medicationId !== medicationId);
+    if (state.current.medicationsTaken.length === before) return;
+    saveState();
+    render();
+  }
+
+  function renderMedicationTracker() {
+    if (!els.medsPanel || !els.medsList) return;
+    const medications = activeSettings().medications;
+    els.medsList.replaceChildren();
+    const takenCount = medications.filter(med => Boolean(medicationTakenEntry(med.id))).length;
+    els.medsStatus.textContent = medications.length
+      ? 'TODAY · ' + takenCount + ' / ' + medications.length + ' MARKED TAKEN'
+      : 'NO MEDICATIONS CONFIGURED';
+    if (!medications.length) {
+      const empty = document.createElement('p');
+      empty.className = 'meds-empty';
+      empty.textContent = 'Add medication entries in Settings to start tracking your day.';
+      els.medsList.append(empty);
+      return;
+    }
+
+    medications.forEach(med => {
+      const entry = medicationTakenEntry(med.id);
+      const row = document.createElement('div');
+      row.className = 'medication-row' + (entry ? ' is-taken' : '');
+      const mark = document.createElement('button');
+      mark.type = 'button';
+      mark.className = 'medication-action';
+      mark.disabled = Boolean(entry);
+      mark.setAttribute('aria-label', entry ? med.name + ' already marked taken today' : 'Mark ' + med.name + ' as taken');
+      const info = document.createElement('span');
+      info.className = 'medication-info';
+      const name = document.createElement('strong');
+      name.textContent = med.name;
+      const dose = document.createElement('small');
+      dose.textContent = med.dose || 'Daily entry';
+      info.append(name, dose);
+      const status = document.createElement('span');
+      status.className = 'medication-taken-label';
+      status.textContent = entry
+        ? 'TAKEN ' + new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(new Date(entry.takenAt))
+        : 'MARK TAKEN';
+      mark.append(info, status);
+      mark.addEventListener('click', () => markMedicationTaken(med.id));
+      row.append(mark);
+      if (entry) {
+        const undo = document.createElement('button');
+        undo.type = 'button';
+        undo.className = 'medication-undo';
+        undo.textContent = 'Undo';
+        undo.setAttribute('aria-label', "Undo today's taken entry for " + med.name);
+        undo.addEventListener('click', () => undoMedicationTaken(med.id));
+        row.append(undo);
+      }
+      els.medsList.append(row);
+    });
+  }
+
   function archiveCurrentDay() {
     if (!state.current.date) return;
 
@@ -3678,6 +3759,22 @@
       row.append(date, score);
       if (day.dayCard) row.addEventListener('click', () => openDayCard(day.dayCard));
       els.historyList.append(row);
+      const medicationLog = Array.isArray(day.medicationsTaken) ? day.medicationsTaken : [];
+      if (medicationLog.length) {
+        const details = document.createElement('details');
+        details.className = 'history-medications';
+        const heading = document.createElement('summary');
+        heading.textContent = 'MEDS · ' + medicationLog.length + ' marked taken — view entries';
+        const list = document.createElement('ul');
+        medicationLog.forEach(entry => {
+          const item = document.createElement('li');
+          const time = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(new Date(entry.takenAt));
+          item.textContent = entry.name + (entry.dose ? ' · ' + entry.dose : '') + ' · ' + time;
+          list.append(item);
+        });
+        details.append(heading, list);
+        els.historyList.append(details);
+      }
     });
   }
 
@@ -4276,6 +4373,68 @@
     els.settingsMessage.textContent = `Actions sorted by ${labels[mode]}.`;
   }
 
+
+  function renderMedicationsEditor() {
+    if (!els.medicationsEditor || !settingsDraft) return;
+    els.medicationsEditor.replaceChildren();
+    settingsDraft.medications.forEach(med => {
+      const row = document.createElement('div');
+      row.className = 'medication-editor-row medication-direct-editor';
+      const nameLabel = document.createElement('label');
+      const nameCaption = document.createElement('span');
+      nameCaption.textContent = 'Medication / entry';
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.maxLength = 80;
+      nameInput.value = med.name;
+      nameInput.addEventListener('input', () => { med.name = nameInput.value; });
+      nameLabel.append(nameCaption, nameInput);
+      const doseLabel = document.createElement('label');
+      const doseCaption = document.createElement('span');
+      doseCaption.textContent = 'Dose or time label (optional)';
+      const doseInput = document.createElement('input');
+      doseInput.type = 'text';
+      doseInput.maxLength = 80;
+      doseInput.value = med.dose;
+      doseInput.placeholder = 'e.g. morning / prescribed dose';
+      doseInput.addEventListener('input', () => { med.dose = doseInput.value; });
+      doseLabel.append(doseCaption, doseInput);
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'delete-action';
+      remove.textContent = '×';
+      remove.setAttribute('aria-label', 'Remove medication entry ' + med.name);
+      remove.addEventListener('click', () => {
+        settingsDraft.medications = settingsDraft.medications.filter(item => item.id !== med.id);
+        renderMedicationsEditor();
+        commitSettingsDraft();
+      });
+      row.append(nameLabel, doseLabel, remove);
+      els.medicationsEditor.append(row);
+    });
+    els.addMedicationButton.disabled = settingsDraft.medications.length >= MEDICATION_LIMIT;
+  }
+
+  function addMedicationFromForm() {
+    if (!settingsDraft) return;
+    const name = els.newMedicationName.value.trim().slice(0, 80);
+    const dose = els.newMedicationDose.value.trim().slice(0, 80);
+    if (!name) {
+      els.newMedicationName.focus();
+      els.settingsMessage.textContent = 'Enter a medication name or a recognizable label.';
+      return;
+    }
+    if (settingsDraft.medications.length >= MEDICATION_LIMIT) {
+      els.settingsMessage.textContent = 'Medication tracker is full (32 entries).';
+      return;
+    }
+    settingsDraft.medications.push({ id: makeId('med'), name, dose });
+    els.newMedicationName.value = '';
+    els.newMedicationDose.value = '';
+    renderMedicationsEditor();
+    commitSettingsDraft();
+    els.settingsMessage.textContent = 'Medication entry added. It has no effect on damage or XP.';
+  }
 
   function renderActionsEditor() {
     els.actionsEditor.replaceChildren();
