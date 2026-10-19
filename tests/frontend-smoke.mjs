@@ -19,6 +19,7 @@ const cssFiles = [
   'styles.css',
   'pawnshop.css',
   'mood.css',
+  'meds.css',
   'metrics.css',
   'settings.css',
   'info.css'
