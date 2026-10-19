@@ -2898,6 +2898,45 @@ body {
   color: #bbc1cb;
 }
 
+.fight-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+}
+.fight-identity { min-width: 0; }
+.fight-damage-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex: 0 0 auto;
+  min-width: 178px;
+  padding: 10px 16px 9px;
+  border: 1px solid rgba(137,218,191,.38);
+  border-radius: 9px;
+  background: linear-gradient(135deg, rgba(38,114,93,.24), rgba(7,13,16,.72));
+  box-shadow: inset 0 1px rgba(255,255,255,.06), 3px 4px rgba(0,0,0,.24);
+  color: #a4ded2;
+  text-align: right;
+}
+.fight-damage-box span {
+  font-size: .63rem;
+  letter-spacing: .14em;
+  font-weight: 900;
+}
+.fight-damage-box strong {
+  color: #e5fff4;
+  font-size: clamp(2rem, 4.5vw, 3.8rem);
+  line-height: 1.07;
+  font-variant-numeric: tabular-nums;
+}
+.fight-damage-box small {
+  color: #8ca99f;
+  font-size: .52rem;
+  letter-spacing: .04em;
+}
+
 .fight-hud {
   position: relative;
   max-width: 100%;
@@ -3149,6 +3188,18 @@ body {
 }
 
 @media (max-width: 620px) {
+  .fight-info-row { align-items: stretch; gap: 0 12px; }
+  .fight-damage-box {
+    flex: 1 1 100%;
+    align-items: flex-start;
+    width: 100%;
+    min-width: 0;
+    padding: 8px 12px;
+    margin-bottom: 14px;
+    text-align: left;
+  }
+  .fight-damage-box strong { font-size: 2.15rem; }
+  .fight-damage-box small { display: none; }
   .fight-card {
     padding: 20px 18px 21px 22px;
     border-radius: 16px;
