@@ -513,8 +513,10 @@
     if (cycleOptions) cycleOptions.hidden = true;
     if (cycleLegendPeriod) cycleLegendPeriod.hidden = true;
     if (cycleLegendSpotting) cycleLegendSpotting.hidden = true;
-    // Clear locally derived health information from the closed dialog.
+    // Clear locally derived health information, including text metadata.
     chart?.replaceChildren();
+    chart?.setAttribute('aria-label', 'Historical metric chart');
+    if (rangeNote) rangeNote.textContent = 'Lines connect recorded points without filling in missing dates.';
   }
 
   function closeMetrics() {
