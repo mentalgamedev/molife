@@ -1534,6 +1534,7 @@
       writeStoredState(activeStorageKey);
       render();
       window.MoLifeCycle?.onIdentityChanged();
+      window.MoLifeMetrics?.onIdentityChanged();
     } finally {
       suppressCloudSave = false;
     }
@@ -1547,6 +1548,7 @@
       ensureToday();
       render();
       window.MoLifeCycle?.onIdentityChanged();
+      window.MoLifeMetrics?.onIdentityChanged();
     } finally {
       suppressCloudSave = false;
     }
