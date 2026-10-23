@@ -11,6 +11,10 @@
   const customStart = document.querySelector('#metricsCustomStart');
   const customEnd = document.querySelector('#metricsCustomEnd');
   const trendToggle = document.querySelector('#metricsTrendToggle');
+  const cycleOptions = document.querySelector('#metricsCycleOptions');
+  const cycleToggle = document.querySelector('#metricsCycleToggle');
+  const cycleLegendPeriod = document.querySelector('#metricsCycleLegendPeriod');
+  const cycleLegendSpotting = document.querySelector('#metricsCycleLegendSpotting');
   const chart = document.querySelector('#metricsChart');
   const chartEmpty = document.querySelector('#metricsChartEmpty');
   const chartCaption = document.querySelector('#metricsChartCaption');
@@ -94,6 +98,7 @@
       ],
       read(state, dateKey) {
         const raw = state?.metrics?.daily?.[dateKey]?.mood;
+        if (raw == null) return null;
         const value = Number(raw);
         return Number.isFinite(value) ? clamp(value, -100, 100) : null;
       },
@@ -123,7 +128,7 @@
       format(value) {
         return Number.isFinite(value) ? `${Math.round(value).toLocaleString()} DMG` : '—';
       },
-      disclaimer: 'Damage includes Actions, combos and items. Recorded fight days with no damage count as zero; missing archives remain unrecorded.'
+      disclaimer: 'Damage includes Actions, previously awarded bonuses and items. Recorded fight days with no damage count as zero; missing archives remain unrecorded.'
     })
   });
 
@@ -230,6 +235,58 @@
     });
   }
 
+  // The Cycle Tracker lives in its own browser-only storage, never in DalliApp's
+  // syncable state. Do not cache these entries or pass them to telemetry/cloud APIs.
+  function availableCycleRecords(metric) {
+    if (metric.id !== 'mood' || !cycleOptions || !cycleToggle) return null;
+    try {
+      const api = window.MoLifeCycleData;
+      const identity = window.DalliApp.getStorageKey();
+      if (!api || !identity) return null;
+      const data = api.read(identity);
+      return data.enabled && data.entries.length ? data.entries : null;
+    } catch (_) {
+      // Inaccessible or invalid local health data fails closed. It is never overwritten.
+      return null;
+    }
+  }
+
+  function renderCycleBands(entries, dates, range, left, top, plotWidth, plotHeight) {
+    if (!entries || !dates.length) return { period: 0, spotting: 0 };
+    const api = window.MoLifeCycleData;
+    const first = api.dayNumber(range.start);
+    const last = api.dayNumber(range.end);
+    if (first === null || last === null) return { period: 0, spotting: 0 };
+    const step = dates.length > 1 ? plotWidth / (dates.length - 1) : plotWidth;
+    const counts = { period: 0, spotting: 0 };
+
+    entries.forEach(entry => {
+      const entryFirst = api.dayNumber(entry.start);
+      const entryLast = api.dayNumber(entry.end);
+      if (entryFirst === null || entryLast === null) return;
+      const from = Math.max(first, entryFirst);
+      const to = Math.min(last, entryLast);
+      if (from > to) return;
+      const firstIndex = from - first;
+      const lastIndex = to - first;
+      const startX = Math.max(left, xFor(firstIndex, dates.length, left, plotWidth) - step / 2);
+      const endX = Math.min(left + plotWidth, xFor(lastIndex, dates.length, left, plotWidth) + step / 2);
+      const band = svgNode('rect', {
+        x: startX.toFixed(2),
+        y: top,
+        width: Math.max(0, endX - startX).toFixed(2),
+        height: plotHeight,
+        class: entry.kind === 'spotting' ? 'metrics-cycle-spotting' : 'metrics-cycle-period'
+      });
+      band.append(svgNode('title', {},
+        `Recorded ${entry.kind}: ${formatLongDate(entry.start)} – ${formatLongDate(entry.end)} (actual dates)`));
+      chart.append(band);
+      counts[entry.kind] += to - from + 1;
+    });
+
+    return counts;
+  }
+
   function selectedTickIndexes(count) {
     if (count <= 1) return [0];
     const desired = count <= 8 ? count : 6;
@@ -252,6 +309,12 @@
     const recorded = values.filter(value => value !== null);
     const trend = trendToggle?.checked ? trendSeries(state, metric, dates, historyByDate) : [];
     const axis = resolvedAxis(metric, recorded, trend);
+    const cycleEntries = availableCycleRecords(metric);
+    if (cycleOptions) cycleOptions.hidden = !cycleEntries;
+    if (!cycleEntries && cycleToggle) cycleToggle.checked = false;
+    const showCycle = Boolean(cycleEntries && cycleToggle?.checked);
+    if (cycleLegendPeriod) cycleLegendPeriod.hidden = !showCycle;
+    if (cycleLegendSpotting) cycleLegendSpotting.hidden = !showCycle;
 
     chart.replaceChildren();
 
@@ -271,6 +334,12 @@
     if (dialogTitle) dialogTitle.textContent = 'Data Terminal';
     if (baselineLabel) baselineLabel.textContent = `${metric.baselineLabel.toLowerCase()} baseline`;
     if (disclaimer) disclaimer.textContent = `${metric.disclaimer} NOTICE 04:20: the Joint Committee confirms these statistics may be slightly elevated.`;
+
+    // Draw observed local calendar intervals first, behind grids and readings.
+    // Bands indicate where an entry exists, NOT a predicted phase or missing Mood value.
+    const cycleCounts = showCycle
+      ? renderCycleBands(cycleEntries, dates, range, left, top, plotWidth, plotHeight)
+      : { period: 0, spotting: 0 };
 
     axis.ticks.forEach(tick => {
       const y = yFor(tick.value, axis, top, plotHeight);
@@ -374,7 +443,7 @@
       );
     });
 
-    chartEmpty.hidden = recorded.length > 0;
+    chartEmpty.hidden = recorded.length > 0 || (showCycle && cycleCounts.period + cycleCounts.spotting > 0);
 
     const average = recorded.length
       ? recorded.reduce((sum, value) => sum + value, 0) / recorded.length
@@ -392,17 +461,22 @@
       ? `${formatLongDate(range.start)} – ${formatLongDate(range.end)} · ${missingCount} day${missingCount === 1 ? '' : 's'} without readings; lines bridge missing days`
       : `${formatLongDate(range.start)} – ${formatLongDate(range.end)} · no readings recorded in this range`;
 
-    rangeNote.textContent = range.clipped
-      ? 'Custom views are limited to 3,660 calendar days. The earliest part of this range was clipped.'
-      : trendToggle?.checked
-        ? 'Dashed 7-day trend averages available readings only. Lines bridge missing dates without imputing readings.'
-        : 'Lines connect recorded points across unrecorded dates; no missing values are filled in.';
+    const readingsNote = trendToggle?.checked
+      ? 'Dashed 7-day trend averages available readings only; lines bridge missing dates without imputing readings.'
+      : 'Lines connect recorded points across unrecorded dates; no missing values are filled in.';
+    const clippedNote = range.clipped
+      ? 'Custom views are limited to 3,660 calendar days. The earliest part of this range was clipped. '
+      : '';
+    const cycleNote = showCycle
+      ? ` Locally recorded cycle days in range: ${cycleCounts.period} period, ${cycleCounts.spotting} spotting. Unshaded dates do not establish a cycle phase or absence of bleeding. No prediction or causal inference.`
+      : '';
+    rangeNote.textContent = clippedNote + readingsNote + cycleNote;
 
     chart.setAttribute(
       'aria-label',
       recorded.length
-        ? `${metric.label} chart from ${formatLongDate(range.start)} to ${formatLongDate(range.end)}. ${recorded.length} of ${dates.length} days recorded. Average ${metric.format(average)}. Lowest ${metric.format(low)}. Highest ${metric.format(high)}.`
-        : `${metric.label} chart from ${formatLongDate(range.start)} to ${formatLongDate(range.end)}. No readings recorded.`
+        ? `${metric.label} chart from ${formatLongDate(range.start)} to ${formatLongDate(range.end)}. ${recorded.length} of ${dates.length} days recorded. Average ${metric.format(average)}. Lowest ${metric.format(low)}. Highest ${metric.format(high)}.${showCycle ? ` Observed period days: ${cycleCounts.period}; spotting days: ${cycleCounts.spotting}. No phase estimates.` : ''}`
+        : `${metric.label} chart from ${formatLongDate(range.start)} to ${formatLongDate(range.end)}. No readings recorded.${showCycle ? ` Observed period days: ${cycleCounts.period}; spotting days: ${cycleCounts.spotting}.` : ''}`
     );
   }
 
@@ -418,6 +492,8 @@
   }
 
   function openMetric(metricId = null) {
+    // Deliberately require an explicit reveal each time the terminal is opened.
+    if (cycleToggle) cycleToggle.checked = false;
     if (METRICS[metricId]) metricSelect.value = metricId;
 
     const today = localDateKey();
@@ -432,7 +508,19 @@
     else dialog.setAttribute('open', '');
   }
 
+  function clearCycleDisplay() {
+    if (cycleToggle) cycleToggle.checked = false;
+    if (cycleOptions) cycleOptions.hidden = true;
+    if (cycleLegendPeriod) cycleLegendPeriod.hidden = true;
+    if (cycleLegendSpotting) cycleLegendSpotting.hidden = true;
+    // Clear locally derived health information, including text metadata.
+    chart?.replaceChildren();
+    chart?.setAttribute('aria-label', 'Historical metric chart');
+    if (rangeNote) rangeNote.textContent = 'Lines connect recorded points without filling in missing dates.';
+  }
+
   function closeMetrics() {
+    clearCycleDisplay();
     if (!dialog.open && !dialog.hasAttribute('open')) return;
     if (typeof dialog.close === 'function') dialog.close();
     else dialog.removeAttribute('open');
@@ -446,7 +534,11 @@
     button.addEventListener('click', () => setRange(button.dataset.metricsRange));
   });
 
-  metricSelect?.addEventListener('change', renderGraph);
+  metricSelect?.addEventListener('change', () => {
+    if (cycleToggle) cycleToggle.checked = false;
+    renderGraph();
+  });
+  cycleToggle?.addEventListener('change', renderGraph);
   trendToggle?.addEventListener('change', renderGraph);
   customStart?.addEventListener('change', renderGraph);
   customEnd?.addEventListener('change', renderGraph);
@@ -455,13 +547,21 @@
   dialog.addEventListener('click', event => {
     if (event.target === dialog) closeMetrics();
   });
+  dialog.addEventListener('close', clearCycleDisplay);
 
   window.addEventListener('resize', () => {
     if (dialog.open) renderGraph();
   }, { passive: true });
 
+  function onIdentityChanged() {
+    // An account/session switch must not leave a previous person's health overlay visible.
+    clearCycleDisplay();
+    if (dialog.open) closeMetrics();
+  }
+
   window.MoLifeMetrics = Object.freeze({
     open: openMetric,
-    render: renderGraph
+    render: renderGraph,
+    onIdentityChanged
   });
 })();

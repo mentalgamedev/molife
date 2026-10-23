@@ -543,6 +543,14 @@ Fixes Air Datepicker's bundled default Russian calendar: month names and weekday
 
 Main state schema remains **v14**; no SQL migration. PWA cache bumped to 4.33.
 
+## v4.34 — Office of Questionably Correlated Affairs
+
+The Data Terminal's **Mood** graph can optionally display actual locally recorded period and spotting intervals as shaded bands. **Show recorded cycle dates** appears only when the current local account has explicitly enabled the Cycle Tracker and logged an interval. It is unchecked on every opening, resets on metric changes, and is not available for the Damage graph.
+
+Bands align with the same calendar-date axis as Mood readings and remain clipped to the selected Week/Month/Year/Custom range. They show **only observed records**, not predicted phases, ovulation or fertility. Missing Mood entries stay missing (including explicit `null` readings): they do not affect record counts/averages, and unshaded dates cannot establish any phase or absence of bleeding. The chart includes a readable legend and accessible text counts for observed period and spotting days. No medical or causal interpretation is made.
+
+This is a **browser-local read-only overlay**. Cycle data never enters `DalliApp` syncable state, profiles, templates, server APIs, analytics or the Data Terminal's shared metrics store. Closing the Data Terminal, using Escape or switching accounts clears rendered sensitive bands; invalid/unavailable local storage fails closed without data loss. Existing cycle records are unchanged, no SQL/state migration, and the offline app cache is updated.
+
 ## Self-hosting
 
 See [DEPLOY.md](DEPLOY.md) for the provider-neutral self-hosting guide.
