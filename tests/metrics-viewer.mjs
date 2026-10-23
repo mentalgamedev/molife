@@ -137,6 +137,8 @@ identity = 'test-user-2';
 viewer.onIdentityChanged();
 assert.equal(nodes.get('metricsDialog').open, false, 'identity change closes sensitive view');
 assert.equal(chart.children.length, 0, 'all previously visible cycle data cleared');
+assert.doesNotMatch(nodes.get('metricsRangeNote').textContent, /period, .*spotting/);
+assert.doesNotMatch(chart.attrs['aria-label'], /Observed period/);
 assert.equal(overlayToggle.checked, false);
 viewer.open('mood');
 assert.equal(overlayOptions.hidden, true, 'a different account cannot see earlier cycle records');
@@ -161,6 +163,8 @@ overlayToggle.handlers.change();
 assert.equal(band('metrics-cycle-period').length, 1);
 nodes.get('metricsDialog').close();
 assert.equal(chart.children.length, 0, 'escape/native dialog closure erases sensitive SVG nodes');
+assert.doesNotMatch(nodes.get('metricsRangeNote').textContent, /period, .*spotting/);
+assert.doesNotMatch(chart.attrs['aria-label'], /Observed period/);
 assert.equal(overlayToggle.checked, false);
 
 console.log('Data Terminal sparse Mood readings, cycle clipping, privacy and identity isolation passed');
