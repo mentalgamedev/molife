@@ -24,6 +24,9 @@ jobs:
       - name: Run frontend smoke checks
         run: node tests/frontend-smoke.mjs
 
+      - name: Run data terminal regression tests
+        run: node tests/metrics-viewer.mjs
+
       - name: Run cloud sync race tests
         run: node tests/cloud-sync.mjs
 
