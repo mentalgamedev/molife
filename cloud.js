@@ -977,6 +977,7 @@
       csrfToken = '';
       user = null;
 
+      window.MoLifeCycle?.deleteAccountData(userStorageKey(deletedUserId));
       try {
         localStorage.removeItem(userStorageKey(deletedUserId));
       } catch (error) {
