@@ -145,7 +145,7 @@
     return {
       days: labels(days, 'weekday', 'long'),
       daysShort,
-      daysMin: daysShort.map(label => Array.from(label.replace(/\\.$/, '')).slice(0, 2).join('')),
+      daysMin: daysShort.map(label => Array.from(label.replace(/\.$/, '')).slice(0, 2).join('')),
       months: labels(months, 'month', 'long'),
       monthsShort: labels(months, 'month', 'short'),
       today: strings.today,
