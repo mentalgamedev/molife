@@ -89,7 +89,6 @@
     { id: 'moles-smart-bench', tags: ['generic'], weight: 8, text: 'MO.LES.TECH SMART BENCH UPDATE NOW REQUIRES BENCH TO RESTART' },
     { id: 'moles-lamp', tags: ['generic'], weight: 7, text: 'NEW MO.LES.TECH STREETLIGHT SUCCESSFULLY IDENTIFIES NIGHTTIME IN 73% OF TESTS' },
     { id: 'moles-work', tags: ['work'], weight: 10, text: 'MO.LES.TECH REPORTS PRODUCTIVITY SURGE; HUMAN FACTOR LISTED UNDER KNOWN ISSUES' },
-    { id: 'moles-combo', tags: ['combo'], weight: 8, text: 'MO.LES.TECH ANALYTICS FLAG ORDERED ACTION SEQUENCE AS “POSSIBLY INTENTIONAL”' },
     { id: 'moles-overkill', tags: ['overkill'], weight: 9, text: 'MO.LES.TECH SAFETY MODEL CLASSIFIES OVERKILL AS “WITHIN DEMO PARAMETERS”' },
 
     { id: 'phat-ed-questionable', tags: ['item', 'loot'], weight: 12, text: 'PHAT ED’S PAWNSHOP REMINDS CUSTOMERS THAT “DUBIOUS” IS A CONDITION, NOT A WARRANTY CATEGORY' },
@@ -115,7 +114,6 @@
     { id: 'binary-night', tags: ['late', 'mystery'], weight: 9, text: 'MIDNIGHT NOISE COMPLAINT DESCRIBES “COUNTING, BUT ONLY TWO NUMBERS”; CASE FORWARDED TO NOBODY' },
     { id: 'binary-council', tags: ['mystery'], weight: 7, text: 'CITY COUNCIL DENIES KNOWLEDGE OF UNDERGROUND BINARY RITUALS BEFORE REPORTER FINISHES QUESTION' },
 
-    { id: 'city-combo', tags: ['combo'], weight: 8, text: 'CRESTFALLEN TRAFFIC OFFICE APPROVES COMBO SEQUENCE PROVIDED STEPS OCCUR IN THE CORRECT ORDER' },
     { id: 'city-streak', tags: ['streak'], weight: 8, text: 'LOCAL WIN STREAK NOW LONG ENOUGH TO REQUIRE ITS OWN MUNICIPAL FORM' },
     { id: 'city-victory', tags: ['victory'], weight: 8, text: 'CITY HALL CONFIRMS DARK DOPPELGÄNGER DEFEAT; CEREMONIAL RIBBON ALREADY MISSING' },
     { id: 'city-no-damage', tags: ['idle'], weight: 8, text: 'CRESTFALLEN EMERGENCY SERVICES REPORT NO ACTIVITY; DARK DOPPELGÄNGER SEEN LOOKING COMFORTABLE' },
@@ -139,9 +137,6 @@
     ],
     barely: [
       ['CRESTFALLEN LIBRARY CONFIRMS ZERO HP STILL COUNTS AS ZERO', 'The finding has been filed under “technically correct,” where it may never be seen again.']
-    ],
-    combo: [
-      ['ORDERED ACTIONS TRIGGER MUNICIPAL SUSPICION', 'City analysts agree the sequence looked coordinated, which is unusual enough to document.']
     ]
   });
 
@@ -300,7 +295,6 @@
     medsPanel: document.querySelector('#medsPanel'),
     medsList: document.querySelector('#medsList'),
     medsStatus: document.querySelector('#medsStatus'),
-    combosPanel: document.querySelector('#combosPanel'),
     arsenalPanel: document.querySelector('#arsenalPanel'),
     arsenalList: document.querySelector('#arsenalList'),
     pawnshopItemDialog: document.querySelector('#pawnshopItemDialog'),
@@ -348,7 +342,6 @@
     dayCardEnemyHp: document.querySelector('#dayCardEnemyHp'),
     dayCardDamage: document.querySelector('#dayCardDamage'),
     dayCardOverkill: document.querySelector('#dayCardOverkill'),
-    dayCardCombos: document.querySelector('#dayCardCombos'),
     dayCardType: document.querySelector('#dayCardType'),
     dayCardHeadline: document.querySelector('#dayCardHeadline'),
     dayCardCopy: document.querySelector('#dayCardCopy'),
@@ -363,8 +356,6 @@
     attackReportCategory: document.querySelector('#attackReportCategory'),
     attackReportDamage: document.querySelector('#attackReportDamage'),
     attackReportHp: document.querySelector('#attackReportHp'),
-    attackReportComboRow: document.querySelector('#attackReportComboRow'),
-    attackReportCombo: document.querySelector('#attackReportCombo'),
     attackReportRequiredRow: document.querySelector('#attackReportRequiredRow'),
     attackReportRequired: document.querySelector('#attackReportRequired'),
     attackReportMessage: document.querySelector('#attackReportMessage'),
@@ -404,10 +395,6 @@
     newActionRequiredCount: document.querySelector('#newActionRequiredCount'),
     newActionVisible: document.querySelector('#newActionVisible'),
     addActionButton: document.querySelector('#addActionButton'),
-    combosEditor: document.querySelector('#combosEditor'),
-    newComboName: document.querySelector('#newComboName'),
-    newComboMultiplier: document.querySelector('#newComboMultiplier'),
-    addComboButton: document.querySelector('#addComboButton'),
     templateName: document.querySelector('#templateName'),
     exportTemplateButton: document.querySelector('#exportTemplateButton'),
     importTemplateButton: document.querySelector('#importTemplateButton'),
@@ -1215,31 +1202,8 @@
         };
       });
 
-    const normalizedActionIds = new Set(settings.actions.map(action => action.id));
-    const comboIds = new Set();
-    const enabledSequences = new Set();
-    settings.combos = (Array.isArray(source.combos) ? source.combos : [])
-      .slice(0, 100)
-      .map((combo, index) => {
-        let id = String(combo?.id || `combo-${index + 1}`).slice(0, 128);
-        if (!id || comboIds.has(id)) id = makeId('combo');
-        comboIds.add(id);
-        const actionIds = (Array.isArray(combo?.actionIds) ? combo.actionIds : [])
-          .slice(0, COMBO_MAX_STEPS)
-          .map(value => String(value))
-          .filter(actionId => normalizedActionIds.has(actionId));
-        let enabled = combo?.enabled !== false && actionIds.length >= 2;
-        const fingerprint = actionIds.join('\u001f');
-        if (enabled && enabledSequences.has(fingerprint)) enabled = false;
-        if (enabled) enabledSequences.add(fingerprint);
-        return {
-          id,
-          name: String(combo?.name || `Combo ${index + 1}`).slice(0, 80),
-          multiplier: clampNumber(combo?.multiplier, COMBO_MIN_MULTIPLIER, COMBO_MAX_MULTIPLIER, COMBO_DEFAULT_MULTIPLIER),
-          enabled,
-          actionIds
-        };
-      });
+    // Retired definitions are discarded; empty field remains for v14 validation.
+    settings.combos = [];
 
     return settings;
   }
@@ -1381,22 +1345,8 @@
     next.current.loot = normalizeLootState(candidate.current?.loot);
     next.current.dayCard = normalizeDayCard(candidate.current?.dayCard);
 
-    const comboIdSet = new Set(activeSettings(next).combos.map(combo => combo.id));
-    const transactionIds = new Set(next.current.transactions.filter(tx => tx.type === 'action').map(tx => tx.id));
-    const rawProgress = candidate.current?.comboProgress;
+    // Keep historical bonuses; discard any unfinished sequences.
     next.current.comboProgress = {};
-    if (rawProgress && typeof rawProgress === 'object') {
-      Object.entries(rawProgress).forEach(([comboId, progress]) => {
-        if (!comboIdSet.has(comboId)) return;
-        const combo = activeSettings(next).combos.find(item => item.id === comboId);
-        const sources = (Array.isArray(progress?.sourceTransactionIds) ? progress.sourceTransactionIds : [])
-          .map(String)
-          .filter(id => transactionIds.has(id))
-          .slice(0, Math.max(0, combo.actionIds.length - 1));
-        const index = Math.min(sources.length, clampInt(progress?.index, 0, Math.max(0, combo.actionIds.length - 1), sources.length));
-        next.current.comboProgress[comboId] = { index, sourceTransactionIds: sources.slice(0, index) };
-      });
-    }
     return next;
   }
 
@@ -1721,65 +1671,7 @@
     return !currentRequirement || currentRequirement.requiredCount <= 1;
   }
 
-  function comboProgress(comboId) {
-    return state.current.comboProgress[comboId] || { index: 0, sourceTransactionIds: [] };
-  }
 
-  function processCombosForAction(actionTx) {
-    const completions = [];
-    const actionTransactions = new Map(
-      state.current.transactions
-        .filter(tx => tx.type === 'action')
-        .map(tx => [tx.id, tx])
-    );
-
-    activeSettings().combos.forEach(combo => {
-      if (!combo.enabled || combo.actionIds.length < 2) {
-        delete state.current.comboProgress[combo.id];
-        return;
-      }
-
-      const progress = comboProgress(combo.id);
-      const expectedActionId = combo.actionIds[progress.index] || combo.actionIds[0];
-      if (actionTx.actionId !== expectedActionId) return;
-
-      const sourceTransactionIds = [...progress.sourceTransactionIds, actionTx.id];
-      const nextIndex = progress.index + 1;
-
-      if (nextIndex < combo.actionIds.length) {
-        state.current.comboProgress[combo.id] = {
-          index: nextIndex,
-          sourceTransactionIds
-        };
-        return;
-      }
-
-      const sequenceDamage = sourceTransactionIds.reduce(
-        (sum, id) => sum + (actionTransactions.get(id)?.damage || 0),
-        0
-      );
-      const bonusDamage = Math.max(1, Math.round(sequenceDamage * (combo.multiplier - 1)));
-      completions.push({ combo, sourceTransactionIds, sequenceDamage, bonusDamage });
-      state.current.comboProgress[combo.id] = { index: 0, sourceTransactionIds: [] };
-    });
-
-    if (!completions.length) return null;
-
-    completions.sort((a, b) => b.bonusDamage - a.bonusDamage || b.combo.multiplier - a.combo.multiplier);
-    const winner = completions[0];
-    const event = {
-      type: 'combo',
-      id: makeId('combo-tx'),
-      comboId: winner.combo.id,
-      comboName: winner.combo.name,
-      multiplier: Number(winner.combo.multiplier.toFixed(2)),
-      damage: winner.bonusDamage,
-      sourceTransactionIds: winner.sourceTransactionIds,
-      timestamp: Date.now() + 1
-    };
-    state.current.transactions.push(event);
-    return event;
-  }
 
 
   function rollVictoryLootIfNeeded() {
@@ -2261,7 +2153,6 @@
 
     if (summary.isVictory) tags.add('victory');
     if (summary.itemsUsed > 0) tags.add('item');
-    if (summary.combosLanded > 0) tags.add('combo');
     if (summary.overkill > 0) tags.add('overkill');
     if (summary.totalDamage === 0) tags.add('idle');
     if (!summary.isVictory && summary.currentHp <= summary.maxHp * 0.35) tags.add('wounded');
@@ -2286,7 +2177,7 @@
     return deterministicWeightedSample(
       candidates,
       3,
-      `${state.current.date}|${summary.totalDamage}|${summary.itemsUsed}|${summary.combosLanded}|${hour >= 21 ? 'late' : 'day'}`
+      `${state.current.date}|${summary.totalDamage}|${summary.itemsUsed}|${hour >= 21 ? 'late' : 'day'}`
     ).map(item => item.text);
   }
 
@@ -2324,9 +2215,6 @@
     if (summary.overkill >= Math.max(10, summary.maxHp * 0.5)) {
       return { key: 'overkill', type: 'EXCESSIVE FORCE', dominant };
     }
-    if (summary.combosLanded >= 2) {
-      return { key: 'combo', type: 'COMBO OFFENDER', dominant };
-    }
     if (share >= 0.9 && active.length > 0) {
       return { key: 'one-track', type: 'ONE-TRACK ASSAILANT', dominant };
     }
@@ -2354,11 +2242,6 @@
         ['DARK SELF DEFEATED; USER CONTINUES HITTING IT FOR ADMINISTRATIVE REASONS', `${summary.overkill} points of overkill were recorded. Authorities insist this was probably unnecessary.`],
         ['INTERNAL HOSTILITY ENDS IN DISPROPORTIONATE RESPONSE', 'Crestfallen observers describe the damage total as “legally a bit much.”'],
         ['DARK DOPPELGÄNGER FILES COMPLAINT AFTER FIGHT ALREADY OVER', 'mo.les.tech confirms there is currently no appeals process for hostile internal entities.']
-      ],
-      combo: [
-        ['COMBO ACTIVITY LINKED TO COLLAPSE OF LOCAL DARKNESS', `${summary.combosLanded} combo attacks landed before the paperwork could intervene.`],
-        ['ORDERED BEHAVIOR PRODUCES ALARMING RESULTS', 'Investigators say several unrelated responsible decisions may have been coordinated.'],
-        ['DARK DOPPELGÄNGER CLAIMS ACTION SEQUENCE WAS “CHEAP”', 'Officials reviewed the footage and awarded the damage anyway.']
       ],
       'one-track': [
         [`${category.toUpperCase()} USED REPEATEDLY IN SUSTAINED ASSAULT`, 'Experts confirm other life categories remained available throughout the incident.'],
@@ -2399,7 +2282,7 @@
 
     const basePair = deterministicPick(
       pools[personality.key] || pools.custom,
-      `${state.current.date}|${personality.key}|${summary.totalDamage}|${summary.combosLanded}`
+      `${state.current.date}|${personality.key}|${summary.totalDamage}`
     );
     return maybeCrestfallenDailyReference(personality, summary, basePair);
   }
@@ -2485,11 +2368,10 @@
     };
     state.current.transactions.push(actionTx);
 
-    const comboEvent = processCombosForAction(actionTx);
     const justDefeated = finalizeVictoryIfNeeded();
     const afterSummary = getSummary();
     const tenaciousResisted = !beforeSummary.tenaciousHolding && afterSummary.tenaciousHolding;
-    const attackReport = makeAttackReport(actionTx, afterSummary, comboEvent, justDefeated);
+    const attackReport = makeAttackReport(actionTx, afterSummary, justDefeated);
 
     saveState();
     render({
@@ -2497,13 +2379,12 @@
       justDefeated,
       hitDamage: actionTx.damage,
       hitName: actionTx.actionName,
-      comboEvent,
       tenaciousResisted,
       attackReport
     });
   }
 
-  function makeAttackReport(actionTx, summary, comboEvent = null, justDefeated = false) {
+  function makeAttackReport(actionTx, summary, justDefeated = false) {
     return {
       transactionId: actionTx.id,
       actionName: actionTx.actionName,
@@ -2511,8 +2392,6 @@
       damage: actionTx.damage,
       currentHp: summary.currentHp,
       maxHp: summary.maxHp,
-      comboName: comboEvent?.comboName || '',
-      comboDamage: comboEvent?.damage || 0,
       requiredRemainingCount: summary.requiredRemainingCount,
       tenaciousHolding: summary.tenaciousHolding,
       isVictory: summary.isVictory,
@@ -2577,12 +2456,11 @@
     state.current.transactions.push(actionTx);
     state.oneOffs = state.oneOffs.filter(item => item.id !== oneOff.id);
 
-    // One-offs use the normal Focus/Chill damage rules, but deliberately never
-    // participate in combos or Required-for-victory rules.
+    // One-offs use Focus/Chill but never satisfy Required-for-victory rules.
     const justDefeated = finalizeVictoryIfNeeded();
     const afterSummary = getSummary();
     const tenaciousResisted = !beforeSummary.tenaciousHolding && afterSummary.tenaciousHolding;
-    const attackReport = makeAttackReport(actionTx, afterSummary, null, justDefeated);
+    const attackReport = makeAttackReport(actionTx, afterSummary, justDefeated);
 
     saveState();
     render({
@@ -2590,7 +2468,6 @@
       justDefeated,
       hitDamage: actionTx.damage,
       hitName: actionTx.actionName,
-      comboEvent: null,
       tenaciousResisted,
       attackReport
     });
@@ -2617,12 +2494,6 @@
       tx.id !== transactionId
       && !(tx.type === 'combo' && tx.sourceTransactionIds.includes(transactionId))
     ));
-
-    Object.entries(state.current.comboProgress).forEach(([comboId, progress]) => {
-      if (progress.sourceTransactionIds.includes(transactionId)) {
-        state.current.comboProgress[comboId] = { index: 0, sourceTransactionIds: [] };
-      }
-    });
 
     finalizeVictoryIfNeeded();
     saveState();
@@ -2681,9 +2552,6 @@
           : 'DARK DOPPELGÄNGER REACHES EXACTLY ZERO HP; ACCOUNTANTS DESCRIBE RESULT AS DISTURBINGLY TIDY'
       );
 
-      if (summary.combosLanded > 0) {
-        messages.push(`${summary.combosLanded} COMBO ATTACK${summary.combosLanded === 1 ? '' : 'S'} LANDED; INTERNAL DARKNESS ALLEGES COLLUSION`);
-      }
       if (summary.itemsUsed > 0) {
         messages.push(`${summary.itemsUsed} PAWNSHOP ITEM${summary.itemsUsed === 1 ? '' : 'S'} USED; PERSONAL GROWTH AUTHORITIES LOOK THE OTHER WAY`);
       }
@@ -2892,7 +2760,6 @@
     renderProgression();
     renderPawnshop(summary, options.lootClaimed?.id || '');
     renderCategories(summary);
-    renderCombos();
     renderLog();
     renderHistory();
 
@@ -2905,8 +2772,6 @@
       specialMessage = `${options.hitName.toUpperCase()} USED; ${options.itemEvent.damage} DAMAGE RECORDED`;
     } else if (options.tenaciousResisted) {
       specialMessage = 'DARK DOPPELGÄNGER RETURNS TO 1 HP; TENACIOUS PROTOCOL REMAINS ACTIVE';
-    } else if (options.comboEvent) {
-      specialMessage = `${options.comboEvent.comboName.toUpperCase()} COMBO LANDS; LOCAL DARKNESS TAKES ADDITIONAL ${options.comboEvent.damage} DAMAGE`;
     } else if (options.justDefeated) {
       specialMessage = '…WE HAVE RECEIVED UPDATED INFORMATION. DARK DOPPELGÄNGER IS DOWN. VICTORY +20 XP.';
     } else if (options.hitDamage && options.hitName) {
@@ -2920,7 +2785,7 @@
     }
 
     if (options.hitDamage) {
-      showFightFeedback(options.hitDamage, options.comboEvent, options.tenaciousResisted);
+      showFightFeedback(options.hitDamage, options.tenaciousResisted);
     }
 
     if (options.attackReport) {
@@ -3008,11 +2873,6 @@
       ? 'Target: 0 HP'
       : `Target: ${report.currentHp} / ${report.maxHp} HP`;
 
-    els.attackReportComboRow.hidden = report.comboDamage <= 0;
-    els.attackReportCombo.textContent = report.comboDamage > 0
-      ? `${report.comboName} · +${report.comboDamage} DMG`
-      : '';
-
     els.attackReportRequiredRow.hidden = report.requiredRemainingCount <= 0;
     els.attackReportRequired.textContent = report.tenaciousHolding
       ? `Lethal hit rejected · ${report.requiredRemainingCount} required move${report.requiredRemainingCount === 1 ? '' : 's'} remain · restored to 1 HP`
@@ -3051,17 +2911,14 @@
     }
   }
 
-  function showFightFeedback(hitDamage, comboEvent = null, tenaciousResisted = false) {
+  function showFightFeedback(hitDamage, tenaciousResisted = false) {
     if (!els.fightFeedback) return;
     els.fightFeedback.textContent = tenaciousResisted
       ? `-${hitDamage} HP · TENACIOUS → 1 HP`
-      : comboEvent
-        ? `-${hitDamage} HP · COMBO +${comboEvent.damage} DMG`
-        : `-${hitDamage} HP`;
-    els.fightFeedback.classList.remove('fight-feedback-pop', 'is-combo', 'is-tenacious');
+      : `-${hitDamage} HP`;
+    els.fightFeedback.classList.remove('fight-feedback-pop', 'is-tenacious');
     els.fightCard?.classList.remove('fight-hit');
     void els.fightFeedback.offsetWidth;
-    if (comboEvent) els.fightFeedback.classList.add('is-combo');
     if (tenaciousResisted) els.fightFeedback.classList.add('is-tenacious');
     els.fightFeedback.classList.add('fight-feedback-pop');
     els.fightCard?.classList.add('fight-hit');
@@ -3604,68 +3461,6 @@
     });
   }
 
-  function renderCombos() {
-    if (!els.combosPanel) return;
-    els.combosPanel.replaceChildren();
-
-    const combos = activeSettings().combos;
-    els.combosPanel.hidden = combos.length === 0;
-    if (!combos.length) return;
-
-    const head = document.createElement('div');
-    head.className = 'combos-panel-head';
-    const copy = document.createElement('div');
-    copy.innerHTML = '<div class="eyebrow">CHAIN ATTACKS</div><h2>Combos</h2>';
-    const note = document.createElement('div');
-    note.className = 'balance-note';
-    note.textContent = 'Unrelated actions do not break a sequence';
-    head.append(copy, note);
-    els.combosPanel.append(head);
-
-    const grid = document.createElement('div');
-    grid.className = 'combo-grid';
-
-    combos.forEach(combo => {
-      const card = document.createElement('article');
-      card.className = `combo-card${combo.enabled ? '' : ' is-disabled'}`;
-      const title = document.createElement('div');
-      title.className = 'combo-card-title';
-      const strong = document.createElement('strong');
-      strong.textContent = combo.name;
-      const multiplier = document.createElement('span');
-      multiplier.textContent = `×${combo.multiplier.toFixed(2)}`;
-      title.append(strong, multiplier);
-      card.append(title);
-
-      if (combo.actionIds.length < 2) {
-        const warning = document.createElement('div');
-        warning.className = 'combo-warning';
-        warning.textContent = 'Needs at least 2 actions · disabled';
-        card.append(warning);
-      } else {
-        const progress = comboProgress(combo.id);
-        const steps = document.createElement('div');
-        steps.className = 'combo-steps';
-        combo.actionIds.forEach((actionId, index) => {
-          const action = activeSettings().actions.find(item => item.id === actionId);
-          const row = document.createElement('div');
-          row.className = 'combo-step';
-          const mark = document.createElement('span');
-          mark.className = 'combo-step-mark';
-          mark.textContent = !combo.enabled ? '○' : index < progress.index ? '✓' : index === progress.index ? '●' : '○';
-          const name = document.createElement('span');
-          name.textContent = action?.name || 'Missing action';
-          row.append(mark, name);
-          steps.append(row);
-        });
-        card.append(steps);
-      }
-
-      grid.append(card);
-    });
-
-    els.combosPanel.append(grid);
-  }
 
   function renderLog() {
     els.logList.replaceChildren();
@@ -3687,7 +3482,7 @@
       main.className = 'log-main';
       const strong = document.createElement('strong');
       strong.textContent = tx.type === 'combo'
-        ? `COMBO · ${tx.comboName}`
+        ? `LEGACY BONUS · ${tx.comboName}`
         : tx.type === 'item'
           ? `ITEM · ${tx.conditionName ? `${tx.conditionName} ` : ''}${tx.itemName}`
           : tx.actionName;
@@ -3697,7 +3492,7 @@
         minute: '2-digit'
       }).format(new Date(tx.timestamp));
       meta.textContent = tx.type === 'combo'
-        ? `×${tx.multiplier.toFixed(2)} · ${tx.sourceTransactionIds.length} matched actions · ${time}`
+        ? `Previously awarded bonus · ${time}`
         : tx.type === 'item'
           ? `Phat Ed’s Pawnshop · consumed · ${time}`
           : `${tx.categoryName} · ${Math.round(tx.efficiency * 100)}% · ${time}`;
@@ -3795,7 +3590,6 @@
     els.dayCardEnemyHp.textContent = card.enemyHp;
     els.dayCardDamage.textContent = card.damage;
     els.dayCardOverkill.textContent = card.overkill;
-    els.dayCardCombos.textContent = card.combos;
     els.dayCardType.textContent = card.type;
     els.dayCardHeadline.textContent = card.headline;
     els.dayCardCopy.textContent = card.copy;
@@ -3859,7 +3653,7 @@
     if (actionDrag) finishActionDrag({ cancelled: true });
     settingsDraft = deepClone(activeSettings());
     settingsDraft.categories = ensureUncategorizedCategory(settingsDraft.categories);
-    settingsDraft.combos = Array.isArray(settingsDraft.combos) ? settingsDraft.combos : [];
+    settingsDraft.combos = []; // Legacy validator compatibility.
     settingsDraft.medications = Array.isArray(settingsDraft.medications) ? settingsDraft.medications : [];
     els.goalInput.value = settingsDraft.fullEnemyHp;
     els.focusFactorInput.value = clampNumber(settingsDraft.focusFactor, 1, 10, DEFAULT_FOCUS_FACTOR);
@@ -3886,7 +3680,7 @@
     renderCategoriesEditor();
     renderActionsEditor();
     renderMedicationsEditor();
-    renderCombosEditor();
+
     populateCategorySelect();
   }
 
@@ -4055,9 +3849,9 @@
 
     const profileName = activeProfileName();
     const messages = {
-      categories: `Remove all user categories from ${profileName}?\n\nActions and One-offs will be moved to Uncategorized. Actions and combos remain.`,
-      actions: `Remove all Actions from ${profileName}?\n\nCategories remain. Combos will also be removed because they depend on Actions.`,
-      all: `Remove all categories and Actions from ${profileName}?\n\nOnly Uncategorized will remain, Actions and combos will be cleared, and One-offs will fall back to Uncategorized.`
+      categories: `Remove all user categories from ${profileName}?\n\nActions and One-offs will be moved to Uncategorized.`,
+      actions: `Remove all Actions from ${profileName}?\n\nCategories remain.`,
+      all: `Remove all categories and Actions from ${profileName}?\n\nOnly Uncategorized will remain, Actions will be cleared, and One-offs will fall back to Uncategorized.`
     };
     if (!window.confirm(messages[mode] || messages.all)) return;
 
@@ -4078,14 +3872,14 @@
     renderCategoriesEditor();
     renderActionsEditor();
     renderMedicationsEditor();
-    renderCombosEditor();
+
     populateCategorySelect();
 
     if (commitSettingsDraft({ announce: false })) {
       const labels = {
         categories: 'All user categories removed. Actions moved to Uncategorized.',
-        actions: 'All Actions and dependent combos removed.',
-        all: 'All user categories, Actions and combos removed.'
+        actions: 'All Actions removed.',
+        all: 'All user categories and Actions removed.'
       };
       els.settingsMessage.textContent = labels[mode] || labels.all;
     }
@@ -4367,7 +4161,7 @@
 
     settingsDraft.actions = indexed.map(item => item.action);
     renderActionsEditor();
-    renderCombosEditor();
+
     commitSettingsDraft({ announce: false });
     if (els.actionSortSelect) els.actionSortSelect.value = '';
 
@@ -4464,7 +4258,7 @@
       nameLabel.innerHTML = '<span>Name</span>';
       const nameInput = document.createElement('input');
       nameInput.type = 'text'; nameInput.maxLength = 40; nameInput.value = action.name;
-      nameInput.addEventListener('input', () => { action.name = nameInput.value.slice(0, 100); renderCombosEditor(); });
+      nameInput.addEventListener('input', () => { action.name = nameInput.value.slice(0, 100); });
       nameLabel.append(nameInput);
 
       const categoryLabel = document.createElement('label');
@@ -4546,15 +4340,8 @@
       remove.type = 'button'; remove.className = 'delete-action'; remove.textContent = '×'; remove.setAttribute('aria-label', `Delete ${action.name}`);
       remove.addEventListener('click', () => {
         settingsDraft.actions = settingsDraft.actions.filter(item => item.id !== action.id);
-        settingsDraft.combos.forEach(combo => {
-          combo.actionIds = combo.actionIds.filter(actionId => actionId !== action.id);
-          if (combo.actionIds.length < 2) combo.enabled = false;
-        });
-        const duplicateCombosDisabled = disableDuplicateEnabledCombos(settingsDraft.combos);
-        renderActionsEditor(); renderCombosEditor(); populateCategorySelect();
-        els.settingsMessage.textContent = duplicateCombosDisabled
-          ? 'Action removed. Affected combos were updated; a duplicate sequence was disabled.'
-          : 'Action removed. Affected combo steps were updated.';
+        renderActionsEditor(); populateCategorySelect();
+        els.settingsMessage.textContent = 'Action removed.';
         commitSettingsDraft();
       });
 
@@ -4656,280 +4443,16 @@
     if (els.newActionRequiredCount) els.newActionRequiredCount.value = '1';
     if (els.newActionVisible) els.newActionVisible.checked = true;
     syncNewActionRequirementControls();
-    renderActionsEditor(); renderCombosEditor();
+    renderActionsEditor();
     els.settingsMessage.textContent = 'Action added. Dark Doppelgänger has been notified.';
     commitSettingsDraft();
   }
 
-  function comboFingerprint(actionIds) {
-    return actionIds.join('\u001f');
-  }
 
-  function disableDuplicateEnabledCombos(combos) {
-    const seen = new Set();
-    let disabled = 0;
-    combos.forEach(combo => {
-      if (!combo.enabled || combo.actionIds.length < 2) return;
-      const fingerprint = comboFingerprint(combo.actionIds);
-      if (seen.has(fingerprint)) {
-        combo.enabled = false;
-        disabled += 1;
-      } else {
-        seen.add(fingerprint);
-      }
-    });
-    return disabled;
-  }
 
-  function comboChanged(a, b) {
-    if (!a || !b) return true;
-    return a.name !== b.name
-      || Number(a.multiplier) !== Number(b.multiplier)
-      || Boolean(a.enabled) !== Boolean(b.enabled)
-      || comboFingerprint(a.actionIds || []) !== comboFingerprint(b.actionIds || []);
-  }
 
-  function actionOption(action, selectedId) {
-    const option = document.createElement('option');
-    option.value = action.id;
-    option.textContent = action.name;
-    option.selected = action.id === selectedId;
-    return option;
-  }
 
-  function renderCombosEditor() {
-    if (!els.combosEditor) return;
-    els.combosEditor.replaceChildren();
 
-    if (!settingsDraft.combos.length) {
-      const empty = document.createElement('div');
-      empty.className = 'empty-state combo-editor-empty';
-      empty.textContent = 'No combos yet. Coordinated self-improvement remains legally unproven.';
-      els.combosEditor.append(empty);
-      return;
-    }
-
-    settingsDraft.combos.forEach(combo => {
-      const card = document.createElement('div');
-      card.className = 'combo-editor-card combo-direct-editor';
-      card.dataset.comboId = combo.id;
-
-      const head = document.createElement('div');
-      head.className = 'combo-editor-head';
-
-      const nameLabel = document.createElement('label');
-      nameLabel.className = 'combo-name-field';
-      nameLabel.innerHTML = '<span>Name</span>';
-      const nameInput = document.createElement('input');
-      nameInput.type = 'text';
-      nameInput.maxLength = 80;
-      nameInput.value = combo.name;
-      nameInput.addEventListener('input', () => {
-        combo.name = nameInput.value.slice(0, 80);
-      });
-      nameLabel.append(nameInput);
-
-      const multiplierLabel = document.createElement('label');
-      multiplierLabel.innerHTML = '<span>Multiplier</span>';
-      const multiplierInput = document.createElement('input');
-      multiplierInput.type = 'number';
-      multiplierInput.min = String(COMBO_MIN_MULTIPLIER);
-      multiplierInput.max = String(COMBO_MAX_MULTIPLIER);
-      multiplierInput.step = '0.05';
-      multiplierInput.inputMode = 'decimal';
-      multiplierInput.value = Number(combo.multiplier).toFixed(2);
-      multiplierInput.addEventListener('input', () => {
-        combo.multiplier = clampNumber(
-          multiplierInput.value,
-          COMBO_MIN_MULTIPLIER,
-          COMBO_MAX_MULTIPLIER,
-          combo.multiplier
-        );
-      });
-      multiplierLabel.append(multiplierInput);
-
-      const enabledLabel = document.createElement('label');
-      enabledLabel.className = 'combo-enabled-field';
-      const enabledTitle = document.createElement('span');
-      enabledTitle.textContent = 'Enabled';
-      const enabledToggle = document.createElement('span');
-      enabledToggle.className = 'checkbox-row';
-      const enabledInput = document.createElement('input');
-      enabledInput.type = 'checkbox';
-      enabledInput.checked = combo.enabled !== false;
-      const enabledText = document.createElement('span');
-      enabledText.textContent = enabledInput.checked ? 'On' : 'Off';
-      enabledInput.addEventListener('change', () => {
-        combo.enabled = enabledInput.checked && combo.actionIds.length >= 2;
-        enabledInput.checked = combo.enabled;
-        enabledText.textContent = combo.enabled ? 'On' : 'Off';
-      });
-      enabledToggle.append(enabledInput, enabledText);
-      enabledLabel.append(enabledTitle, enabledToggle);
-
-      const removeCombo = document.createElement('button');
-      removeCombo.type = 'button';
-      removeCombo.className = 'delete-action combo-delete';
-      removeCombo.textContent = '×';
-      removeCombo.setAttribute('aria-label', `Delete combo ${combo.name}`);
-      removeCombo.addEventListener('click', () => {
-        settingsDraft.combos = settingsDraft.combos.filter(item => item.id !== combo.id);
-        renderCombosEditor();
-        els.settingsMessage.textContent = 'Combo removed.';
-        commitSettingsDraft();
-      });
-
-      head.append(nameLabel, multiplierLabel, enabledLabel, removeCombo);
-      card.append(head);
-
-      const sequence = document.createElement('div');
-      sequence.className = 'combo-sequence-editor';
-
-      combo.actionIds.forEach((actionId, stepIndex) => {
-        const step = document.createElement('div');
-        step.className = 'combo-step-editor';
-
-        const number = document.createElement('span');
-        number.className = 'combo-step-number';
-        number.textContent = String(stepIndex + 1);
-
-        const select = document.createElement('select');
-        select.setAttribute('aria-label', `Step ${stepIndex + 1} action`);
-        settingsDraft.actions.forEach(action => select.append(actionOption(action, actionId)));
-        select.value = actionId;
-        select.addEventListener('change', () => {
-          combo.actionIds[stepIndex] = select.value;
-          renderCombosEditor();
-          els.settingsMessage.textContent = 'Combo sequence updated. Today’s progress for it was reset.';
-          commitSettingsDraft();
-        });
-
-        const up = document.createElement('button');
-        up.type = 'button';
-        up.className = 'combo-step-button';
-        up.textContent = '↑';
-        up.title = 'Move step up';
-        up.disabled = stepIndex === 0;
-        up.addEventListener('click', () => {
-          [combo.actionIds[stepIndex - 1], combo.actionIds[stepIndex]] = [
-            combo.actionIds[stepIndex],
-            combo.actionIds[stepIndex - 1]
-          ];
-          renderCombosEditor();
-          commitSettingsDraft();
-        });
-
-        const down = document.createElement('button');
-        down.type = 'button';
-        down.className = 'combo-step-button';
-        down.textContent = '↓';
-        down.title = 'Move step down';
-        down.disabled = stepIndex === combo.actionIds.length - 1;
-        down.addEventListener('click', () => {
-          [combo.actionIds[stepIndex + 1], combo.actionIds[stepIndex]] = [
-            combo.actionIds[stepIndex],
-            combo.actionIds[stepIndex + 1]
-          ];
-          renderCombosEditor();
-          commitSettingsDraft();
-        });
-
-        const removeStep = document.createElement('button');
-        removeStep.type = 'button';
-        removeStep.className = 'combo-step-button is-delete';
-        removeStep.textContent = '×';
-        removeStep.title = 'Remove step';
-        removeStep.addEventListener('click', () => {
-          combo.actionIds.splice(stepIndex, 1);
-          if (combo.actionIds.length < 2) combo.enabled = false;
-          renderCombosEditor();
-          els.settingsMessage.textContent = combo.actionIds.length < 2
-            ? 'Combo disabled: it needs at least 2 actions.'
-            : 'Combo step removed. Today’s progress for it was reset.';
-          commitSettingsDraft();
-        });
-
-        step.append(number, select, up, down, removeStep);
-        sequence.append(step);
-      });
-
-      card.append(sequence);
-
-      const footer = document.createElement('div');
-      footer.className = 'combo-editor-footer';
-
-      const addStep = document.createElement('button');
-      addStep.type = 'button';
-      addStep.className = 'secondary-button combo-add-step';
-      addStep.textContent = '+ Add step';
-      addStep.disabled = settingsDraft.actions.length === 0 || combo.actionIds.length >= COMBO_MAX_STEPS;
-      addStep.addEventListener('click', () => {
-        if (!settingsDraft.actions.length || combo.actionIds.length >= COMBO_MAX_STEPS) return;
-        combo.actionIds.push(settingsDraft.actions[0].id);
-        renderCombosEditor();
-        els.settingsMessage.textContent = 'Combo step added. Today’s progress for it was reset.';
-        commitSettingsDraft();
-      });
-
-      const status = document.createElement('span');
-      status.className = 'combo-editor-status';
-      if (combo.actionIds.length < 2) {
-        status.classList.add('is-warning');
-        status.textContent = 'Needs at least 2 actions · disabled';
-      } else {
-        status.textContent = `${combo.actionIds.length}/${COMBO_MAX_STEPS} steps · ordered, non-strict`;
-      }
-
-      footer.append(addStep, status);
-      card.append(footer);
-      els.combosEditor.append(card);
-    });
-  }
-
-  function addComboFromForm() {
-    if (!settingsDraft.actions.length) {
-      els.settingsMessage.textContent = 'Add at least one action before creating a combo.';
-      return;
-    }
-
-    const name = els.newComboName.value.trim();
-    if (!name) {
-      els.settingsMessage.textContent = 'Give the combo a name first.';
-      els.newComboName.focus();
-      return;
-    }
-
-    const multiplier = clampNumber(
-      els.newComboMultiplier.value,
-      COMBO_MIN_MULTIPLIER,
-      COMBO_MAX_MULTIPLIER,
-      COMBO_DEFAULT_MULTIPLIER
-    );
-    const actionIds = settingsDraft.actions.length >= 2
-      ? [settingsDraft.actions[0].id, settingsDraft.actions[1].id]
-      : [settingsDraft.actions[0].id, settingsDraft.actions[0].id];
-
-    const fingerprint = comboFingerprint(actionIds);
-    const starterSequenceIsDuplicate = settingsDraft.combos.some(
-      combo => combo.enabled && comboFingerprint(combo.actionIds) === fingerprint
-    );
-
-    settingsDraft.combos.push({
-      id: makeId('combo'),
-      name: name.slice(0, 80),
-      multiplier,
-      enabled: !starterSequenceIsDuplicate,
-      actionIds
-    });
-
-    els.newComboName.value = '';
-    els.newComboMultiplier.value = COMBO_DEFAULT_MULTIPLIER.toFixed(2);
-    renderCombosEditor();
-    els.settingsMessage.textContent = starterSequenceIsDuplicate
-      ? 'Combo created disabled because its starter sequence duplicates an enabled combo. Edit its sequence, then enable it.'
-      : 'Combo created. Configure its ordered sequence below.';
-    commitSettingsDraft();
-  }
 
   function buildSettingsFromDraft() {
     if (!settingsDraft) {
@@ -4982,43 +4505,8 @@
       return { ok: false, message: 'Every action needs a name.' };
     }
 
-    const actionIds = new Set(actions.map(action => action.id));
-    const enabledSequences = new Set();
-    const combos = settingsDraft.combos.map((combo, index) => {
-      const sequence = (Array.isArray(combo.actionIds) ? combo.actionIds : [])
-        .slice(0, COMBO_MAX_STEPS)
-        .map(String)
-        .filter(actionId => actionIds.has(actionId));
-      const enabled = combo.enabled !== false && sequence.length >= 2;
-      return {
-        id: String(combo.id || `combo-${index + 1}`).slice(0, 128),
-        name: String(combo.name || '').trim().slice(0, 80),
-        multiplier: Number(clampNumber(
-          combo.multiplier,
-          COMBO_MIN_MULTIPLIER,
-          COMBO_MAX_MULTIPLIER,
-          COMBO_DEFAULT_MULTIPLIER
-        ).toFixed(2)),
-        enabled,
-        actionIds: sequence
-      };
-    });
-
     if (settingsDraft.medications.some(med => !String(med.name || '').trim())) {
       return { ok: false, message: 'Every medication entry needs a name.' };
-    }
-
-    if (combos.some(combo => !combo.name)) {
-      return { ok: false, message: 'Every combo needs a name.' };
-    }
-
-    for (const combo of combos) {
-      if (!combo.enabled) continue;
-      const fingerprint = comboFingerprint(combo.actionIds);
-      if (enabledSequences.has(fingerprint)) {
-        return { ok: false, message: 'Two enabled combos cannot use the exact same action sequence.' };
-      }
-      enabledSequences.add(fingerprint);
     }
 
     return {
@@ -5044,7 +4532,7 @@
         ).toFixed(2)),
         categories,
         actions,
-        combos,
+        combos: [],
         medications: settingsDraft.medications.slice(0, MEDICATION_LIMIT).map(med => ({
           id: String(med.id).slice(0, 64),
           name: String(med.name || '').trim().slice(0, 80),
@@ -5064,28 +4552,14 @@
       return false;
     }
 
-    const previousCombos = new Map(activeSettings().combos.map(combo => [combo.id, combo]));
     setActiveSettings(result.settings);
 
     const nextActionIds = new Set(activeSettings().actions.map(action => action.id));
     state.current.requiredActions = (state.current.requiredActions || [])
       .filter(required => nextActionIds.has(required.actionId));
 
-    const nextComboIds = new Set(activeSettings().combos.map(combo => combo.id));
-    Object.keys(state.current.comboProgress).forEach(comboId => {
-      const nextCombo = activeSettings().combos.find(combo => combo.id === comboId);
-      const previousCombo = previousCombos.get(comboId);
-      if (!nextComboIds.has(comboId) || comboChanged(previousCombo, nextCombo)) {
-        delete state.current.comboProgress[comboId];
-      }
-    });
-
-    activeSettings().combos.forEach(combo => {
-      const previousCombo = previousCombos.get(combo.id);
-      if (comboChanged(previousCombo, combo)) {
-        state.current.comboProgress[combo.id] = { index: 0, sourceTransactionIds: [] };
-      }
-    });
+    // Current sequences are retired; existing awarded damage is untouched.
+    state.current.comboProgress = {};
 
     finalizeVictoryIfNeeded();
     saveState();
@@ -5159,8 +4633,8 @@
     }
 
     const raw = payload.settings;
-    if (!Array.isArray(raw.categories) || !Array.isArray(raw.actions) || !Array.isArray(raw.combos)) {
-      throw new Error('Template is missing categories, actions or combos.');
+    if (!Array.isArray(raw.categories) || !Array.isArray(raw.actions)) {
+      throw new Error('Template is missing categories or actions.');
     }
 
     const sourceStateVersion = templateSourceStateVersion(payload);
@@ -5208,7 +4682,7 @@
       const legacyTemplate = payload.version === LEGACY_TEMPLATE_VERSION;
 
       const confirmed = window.confirm(
-        'Switch to this MoLife settings template?\n\nThis replaces enemy HP, Focus/Chill tuning, categories/colors, Actions (type, damage, visibility, Required counts and order), medication definitions, and combos (multipliers and sequences). Your One-offs, progression, fight/mood and medication-taken history, today’s recorded damage and locked HP, Pawnshop items and onboarding state stay untouched.'
+        'Switch to this MoLife settings template?\n\nThis replaces enemy HP, Focus/Chill tuning, categories/colors, Actions (type, damage, visibility, Required counts and order), medication definitions, and other challenge settings. Your One-offs, progression, fight/mood and medication-taken history, today’s recorded damage and locked HP, Pawnshop items and onboarding state stay untouched.'
       );
       if (!confirmed) return;
 
@@ -5231,13 +4705,13 @@
       renderCategoriesEditor();
       renderActionsEditor();
       renderMedicationsEditor();
-      renderCombosEditor();
+
       populateCategorySelect();
       render();
 
       els.settingsMessage.textContent = `Template imported into ${activeProfileName()} and activated.`;
       if (els.templateStatus) {
-        els.templateStatus.textContent = `${legacyTemplate ? 'Legacy template upgraded · ' : ''}${importedName ? importedName + ' · ' : ''}${settingsDraft.categories.length - 1} categories · ${settingsDraft.actions.length} actions · ${settingsDraft.combos.length} combos`;
+        els.templateStatus.textContent = `${legacyTemplate ? 'Legacy template upgraded · ' : ''}${importedName ? importedName + ' · ' : ''}${settingsDraft.categories.length - 1} categories · ${settingsDraft.actions.length} actions`;
       }
     } catch (error) {
       console.warn('Could not import MoLife template:', error);
@@ -5273,7 +4747,7 @@
 
   function resetGameData() {
     const confirmed = window.confirm(
-      'Reset ALL MoLife game data?\n\nThis wipes all profiles, categories, actions, medication entries and history, One-offs, combos, Pawnshop items, mood history, fight history, Level, Street Cred and streaks. Your login/account remains.\n\nThe Crestfallen Department of Records will pretend none of this ever happened.'
+      'Reset ALL MoLife game data?\n\nThis wipes all profiles, categories, actions, medication entries and history, One-offs, Pawnshop items, mood history, fight history, Level, Street Cred and streaks. Your login/account remains.\n\nThe Crestfallen Department of Records will pretend none of this ever happened.'
     );
     if (!confirmed) return;
 
@@ -5371,7 +4845,7 @@
       || target === els.focusFactorInput
       || target === els.chillModeInput
       || target === els.chillMultiplierInput
-      || target.closest?.('.category-direct-editor, .action-direct-editor, .combo-direct-editor, .medication-direct-editor');
+      || target.closest?.('.category-direct-editor, .action-direct-editor, .medication-direct-editor');
 
     if (target === els.chillModeInput) syncChillSettingsControls();
     if (editsExistingSetting) {
@@ -5386,7 +4860,7 @@
       || target === els.focusFactorInput
       || target === els.chillModeInput
       || target === els.chillMultiplierInput
-      || target.closest?.('.category-direct-editor, .action-direct-editor, .combo-direct-editor, .medication-direct-editor')) {
+      || target.closest?.('.category-direct-editor, .action-direct-editor, .medication-direct-editor')) {
       scheduleSettingsSave(0);
     }
   });
@@ -5414,7 +4888,6 @@
   els.newActionRequired?.addEventListener('change', syncNewActionRequirementControls);
   els.addActionButton.addEventListener('click', addActionFromForm);
   els.addMedicationButton?.addEventListener('click', addMedicationFromForm);
-  els.addComboButton?.addEventListener('click', addComboFromForm);
   els.lootCrateButton?.addEventListener('click', claimVictoryLoot);
   els.closePawnshopItemButton?.addEventListener('click', closePawnshopItemDialog);
   els.pawnshopItemUseButton?.addEventListener('click', () => {

@@ -9,15 +9,15 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="preload" href="fonts/PunkKid.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=4.32">
-  <link rel="stylesheet" href="pawnshop.css?v=4.32">
-  <link rel="stylesheet" href="mood.css?v=4.32">
-  <link rel="stylesheet" href="meds.css?v=4.32">
-  <link rel="stylesheet" href="vendor/air-datepicker.css?v=4.32">
-  <link rel="stylesheet" href="cycle.css?v=4.32">
-  <link rel="stylesheet" href="metrics.css?v=4.32">
-  <link rel="stylesheet" href="settings.css?v=4.32">
-  <link rel="stylesheet" href="info.css?v=4.32">
+  <link rel="stylesheet" href="styles.css?v=4.33">
+  <link rel="stylesheet" href="pawnshop.css?v=4.33">
+  <link rel="stylesheet" href="mood.css?v=4.33">
+  <link rel="stylesheet" href="meds.css?v=4.33">
+  <link rel="stylesheet" href="vendor/air-datepicker.css?v=4.33">
+  <link rel="stylesheet" href="cycle.css?v=4.33">
+  <link rel="stylesheet" href="metrics.css?v=4.33">
+  <link rel="stylesheet" href="settings.css?v=4.33">
+  <link rel="stylesheet" href="info.css?v=4.33">
 </head>
 <body>
   <div class="city-noise" aria-hidden="true"></div>
@@ -36,7 +36,7 @@
       <div class="brand-block">
         <h1 class="brand-title" aria-label="MoLife"><span class="brand-mo">Mo</span><span class="brand-life">Life</span><span class="brand-tm">™</span></h1>
         <div class="brand-subline"><strong>Daily Struggle Assistant</strong><span> · powered by MoThink-6.7</span></div>
-        <div class="app-version" aria-label="MoLife version 4.32.1">v4.32.1 · Department of Unauthorized Translation</div>
+        <div class="app-version" aria-label="MoLife version 4.33">v4.33 · Bureau of Retroactive Productivity</div>
         <div id="todayLabel" class="muted"></div>
       </div>
       <div class="topbar-actions">
@@ -218,8 +218,6 @@
         </article>
       </section>
 
-      <section id="combosPanel" class="combos-panel panel" hidden></section>
-
       <section class="lower-grid">
         <div class="panel">
           <div class="panel-head">
@@ -376,7 +374,6 @@
         <div><span>Enemy HP</span><strong id="dayCardEnemyHp">0</strong></div>
         <div><span>Damage dealt</span><strong id="dayCardDamage">0</strong></div>
         <div><span>Overkill</span><strong id="dayCardOverkill">0</strong></div>
-        <div><span>Combos landed</span><strong id="dayCardCombos">0</strong></div>
       </div>
       <div id="dayCardType" class="day-type-stamp">ALARMINGLY FUNCTIONAL ADULT</div>
       <h2 id="dayCardHeadline" class="day-card-headline"></h2>
@@ -412,11 +409,6 @@
           <span>DAMAGE DEALT</span>
           <strong id="attackReportDamage">0 DMG</strong>
         </div>
-      </div>
-
-      <div id="attackReportComboRow" class="attack-report-extra is-combo" hidden>
-        <span>COMBO</span>
-        <strong id="attackReportCombo"></strong>
       </div>
 
       <div id="attackReportRequiredRow" class="attack-report-extra is-required" hidden>
@@ -518,7 +510,7 @@
         <div class="settings-section-head">
           <div>
             <h3>Profiles</h3>
-            <p>Separate setups for different modes of life. Profiles use the same configuration data as Settings Templates: combat tuning, categories, Actions, medication entries and combos.</p>
+            <p>Separate setups for different modes of life. Profiles use the same configuration data as Settings Templates: combat tuning, categories, Actions and medication entries.</p>
           </div>
           <button id="addProfileButton" class="secondary-button" type="button">+ Add profile</button>
         </div>
@@ -698,32 +690,6 @@
         <p id="cycleSettingsStatus" class="category-fallback-note">OPEN TO VIEW LOCAL STATUS</p>
       </section>
 
-      <section class="settings-section">
-        <div class="settings-section-head">
-          <div>
-            <h3>Combos</h3>
-            <p>Build ordered attack sequences from your actions. Unrelated actions do not break progress. When a combo lands, its bonus uses the actual effective damage of the matched actions.</p>
-          </div>
-        </div>
-        <div id="combosEditor" class="combos-editor"></div>
-
-        <div class="add-combo-card">
-          <h4>Add combo</h4>
-          <div class="add-combo-grid">
-            <label>
-              <span>Name</span>
-              <input id="newComboName" type="text" maxlength="80" placeholder="e.g. Morning Assault">
-            </label>
-            <label>
-              <span>Multiplier</span>
-              <input id="newComboMultiplier" type="number" min="1.05" max="3" step="0.05" value="1.25" inputmode="decimal">
-            </label>
-          </div>
-          <button id="addComboButton" class="secondary-button" type="button">+ Add combo</button>
-          <p class="category-fallback-note">2–8 steps · repeated actions are allowed · one action can finish only one combo attack.</p>
-        </div>
-      </section>
-
 
       <section class="settings-section configuration-cleanup-section">
         <div class="settings-section-head">
@@ -737,7 +703,7 @@
           <button id="removeAllActionsButton" class="danger-button danger-button-quiet" type="button">Remove all actions</button>
           <button id="removeAllCategoriesActionsButton" class="danger-button" type="button">Remove categories + actions</button>
         </div>
-        <p class="category-fallback-note">Uncategorized is permanent. Removing all categories moves existing Actions and One-offs there. Removing all Actions also removes combos that depend on them.</p>
+        <p class="category-fallback-note">Uncategorized is permanent. Removing all categories moves existing Actions and One-offs there. Action cleanup affects only the selected profile.</p>
       </section>
 
       <section class="settings-section template-section">
@@ -756,7 +722,7 @@
           <button id="importTemplateButton" class="secondary-button" type="button">Import template</button>
           <input id="importTemplateInput" type="file" accept=".json,application/json" hidden>
         </div>
-        <p class="category-fallback-note">Templates include enemy HP, Focus/Chill tuning, categories/colors, Actions (type, damage, order, visibility and Required counts), medication definitions, and combos (multipliers and sequences). They do not include One-offs, Level, Street Cred, streak/fight history, mood or medication-taken history, current-fight data, Pawnshop items or onboarding state.</p>
+        <p class="category-fallback-note">Templates include enemy HP, Focus/Chill tuning, categories/colors, Actions (type, damage, order, visibility and Required counts), and medication definitions. They do not include One-offs, Level, Street Cred, streak/fight history, mood or medication-taken history, current-fight data, Pawnshop items or onboarding state.</p>
         <div id="templateStatus" class="template-status" role="status" aria-live="polite"></div>
       </section>
 
@@ -775,7 +741,7 @@
       <section class="settings-section danger-zone">
         <div>
           <h3>Fresh start</h3>
-          <p>Reset all game progress, all profiles, categories, actions, medication entries, One-offs, combos, Pawnshop items, mood and medication history, Level, Street Cred and history. Your account/login remains untouched.</p>
+          <p>Reset all game progress, all profiles, categories, actions, medication entries, One-offs, Pawnshop items, mood and medication history, Level, Street Cred and history. Your account/login remains untouched.</p>
         </div>
         <button id="resetGameButton" class="danger-button" type="button">Reset game data</button>
       </section>
@@ -815,11 +781,11 @@
     </article>
   </template>
 
-  <script src="app.js?v=4.32" defer></script>
-  <script src="vendor/air-datepicker.js?v=4.32" defer></script>
-  <script src="cycle-data.js?v=4.32" defer></script>
-  <script src="cycle-tracker.js?v=4.32.1" defer></script>
-  <script src="metrics-viewer.js?v=4.32" defer></script>
-  <script src="cloud.js?v=4.32" defer></script>
+  <script src="app.js?v=4.33" defer></script>
+  <script src="vendor/air-datepicker.js?v=4.33" defer></script>
+  <script src="cycle-data.js?v=4.33" defer></script>
+  <script src="cycle-tracker.js?v=4.33" defer></script>
+  <script src="metrics-viewer.js?v=4.33" defer></script>
+  <script src="cloud.js?v=4.33" defer></script>
 </body>
 </html>
