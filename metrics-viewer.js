@@ -98,6 +98,7 @@
       ],
       read(state, dateKey) {
         const raw = state?.metrics?.daily?.[dateKey]?.mood;
+        if (raw == null) return null;
         const value = Number(raw);
         return Number.isFinite(value) ? clamp(value, -100, 100) : null;
       },
@@ -461,7 +462,7 @@
       : `${formatLongDate(range.start)} – ${formatLongDate(range.end)} · no readings recorded in this range`;
 
     const readingsNote = trendToggle?.checked
-      ? 'Dashed 7-day trend averages available Mood readings only; lines bridge missing dates without imputing readings.'
+      ? 'Dashed 7-day trend averages available readings only; lines bridge missing dates without imputing readings.'
       : 'Lines connect recorded points across unrecorded dates; no missing values are filled in.';
     const clippedNote = range.clipped
       ? 'Custom views are limited to 3,660 calendar days. The earliest part of this range was clipped. '
