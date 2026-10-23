@@ -3482,7 +3482,7 @@
       main.className = 'log-main';
       const strong = document.createElement('strong');
       strong.textContent = tx.type === 'combo'
-        ? `COMBO · ${tx.comboName}`
+        ? `LEGACY BONUS · ${tx.comboName}`
         : tx.type === 'item'
           ? `ITEM · ${tx.conditionName ? `${tx.conditionName} ` : ''}${tx.itemName}`
           : tx.actionName;
@@ -3492,7 +3492,7 @@
         minute: '2-digit'
       }).format(new Date(tx.timestamp));
       meta.textContent = tx.type === 'combo'
-        ? `×${tx.multiplier.toFixed(2)} · ${tx.sourceTransactionIds.length} matched actions · ${time}`
+        ? `Previously awarded bonus · ${time}`
         : tx.type === 'item'
           ? `Phat Ed’s Pawnshop · consumed · ${time}`
           : `${tx.categoryName} · ${Math.round(tx.efficiency * 100)}% · ${time}`;
@@ -3849,9 +3849,9 @@
 
     const profileName = activeProfileName();
     const messages = {
-      categories: `Remove all user categories from ${profileName}?\n\nActions and One-offs will be moved to Uncategorized. Actions and combos remain.`,
-      actions: `Remove all Actions from ${profileName}?\n\nCategories remain. Combos will also be removed because they depend on Actions.`,
-      all: `Remove all categories and Actions from ${profileName}?\n\nOnly Uncategorized will remain, Actions and combos will be cleared, and One-offs will fall back to Uncategorized.`
+      categories: `Remove all user categories from ${profileName}?\n\nActions and One-offs will be moved to Uncategorized.`,
+      actions: `Remove all Actions from ${profileName}?\n\nCategories remain.`,
+      all: `Remove all categories and Actions from ${profileName}?\n\nOnly Uncategorized will remain, Actions will be cleared, and One-offs will fall back to Uncategorized.`
     };
     if (!window.confirm(messages[mode] || messages.all)) return;
 
@@ -3878,8 +3878,8 @@
     if (commitSettingsDraft({ announce: false })) {
       const labels = {
         categories: 'All user categories removed. Actions moved to Uncategorized.',
-        actions: 'All Actions and dependent combos removed.',
-        all: 'All user categories, Actions and combos removed.'
+        actions: 'All Actions removed.',
+        all: 'All user categories and Actions removed.'
       };
       els.settingsMessage.textContent = labels[mode] || labels.all;
     }
@@ -4258,7 +4258,7 @@
       nameLabel.innerHTML = '<span>Name</span>';
       const nameInput = document.createElement('input');
       nameInput.type = 'text'; nameInput.maxLength = 40; nameInput.value = action.name;
-      nameInput.addEventListener('input', () => { action.name = nameInput.value.slice(0, 100); renderCombosEditor(); });
+      nameInput.addEventListener('input', () => { action.name = nameInput.value.slice(0, 100); });
       nameLabel.append(nameInput);
 
       const categoryLabel = document.createElement('label');
@@ -4340,15 +4340,8 @@
       remove.type = 'button'; remove.className = 'delete-action'; remove.textContent = '×'; remove.setAttribute('aria-label', `Delete ${action.name}`);
       remove.addEventListener('click', () => {
         settingsDraft.actions = settingsDraft.actions.filter(item => item.id !== action.id);
-        settingsDraft.combos.forEach(combo => {
-          combo.actionIds = combo.actionIds.filter(actionId => actionId !== action.id);
-          if (combo.actionIds.length < 2) combo.enabled = false;
-        });
-        const duplicateCombosDisabled = disableDuplicateEnabledCombos(settingsDraft.combos);
-        renderActionsEditor(); renderCombosEditor(); populateCategorySelect();
-        els.settingsMessage.textContent = duplicateCombosDisabled
-          ? 'Action removed. Affected combos were updated; a duplicate sequence was disabled.'
-          : 'Action removed. Affected combo steps were updated.';
+        renderActionsEditor(); populateCategorySelect();
+        els.settingsMessage.textContent = 'Action removed.';
         commitSettingsDraft();
       });
 
@@ -4450,7 +4443,7 @@
     if (els.newActionRequiredCount) els.newActionRequiredCount.value = '1';
     if (els.newActionVisible) els.newActionVisible.checked = true;
     syncNewActionRequirementControls();
-    renderActionsEditor(); renderCombosEditor();
+    renderActionsEditor();
     els.settingsMessage.textContent = 'Action added. Dark Doppelgänger has been notified.';
     commitSettingsDraft();
   }
@@ -4514,41 +4507,8 @@
 
     const actionIds = new Set(actions.map(action => action.id));
     const enabledSequences = new Set();
-    const combos = settingsDraft.combos.map((combo, index) => {
-      const sequence = (Array.isArray(combo.actionIds) ? combo.actionIds : [])
-        .slice(0, COMBO_MAX_STEPS)
-        .map(String)
-        .filter(actionId => actionIds.has(actionId));
-      const enabled = combo.enabled !== false && sequence.length >= 2;
-      return {
-        id: String(combo.id || `combo-${index + 1}`).slice(0, 128),
-        name: String(combo.name || '').trim().slice(0, 80),
-        multiplier: Number(clampNumber(
-          combo.multiplier,
-          COMBO_MIN_MULTIPLIER,
-          COMBO_MAX_MULTIPLIER,
-          COMBO_DEFAULT_MULTIPLIER
-        ).toFixed(2)),
-        enabled,
-        actionIds: sequence
-      };
-    });
-
     if (settingsDraft.medications.some(med => !String(med.name || '').trim())) {
       return { ok: false, message: 'Every medication entry needs a name.' };
-    }
-
-    if (combos.some(combo => !combo.name)) {
-      return { ok: false, message: 'Every combo needs a name.' };
-    }
-
-    for (const combo of combos) {
-      if (!combo.enabled) continue;
-      const fingerprint = comboFingerprint(combo.actionIds);
-      if (enabledSequences.has(fingerprint)) {
-        return { ok: false, message: 'Two enabled combos cannot use the exact same action sequence.' };
-      }
-      enabledSequences.add(fingerprint);
     }
 
     return {
@@ -4574,7 +4534,7 @@
         ).toFixed(2)),
         categories,
         actions,
-        combos,
+        combos: [],
         medications: settingsDraft.medications.slice(0, MEDICATION_LIMIT).map(med => ({
           id: String(med.id).slice(0, 64),
           name: String(med.name || '').trim().slice(0, 80),
@@ -4594,28 +4554,14 @@
       return false;
     }
 
-    const previousCombos = new Map(activeSettings().combos.map(combo => [combo.id, combo]));
     setActiveSettings(result.settings);
 
     const nextActionIds = new Set(activeSettings().actions.map(action => action.id));
     state.current.requiredActions = (state.current.requiredActions || [])
       .filter(required => nextActionIds.has(required.actionId));
 
-    const nextComboIds = new Set(activeSettings().combos.map(combo => combo.id));
-    Object.keys(state.current.comboProgress).forEach(comboId => {
-      const nextCombo = activeSettings().combos.find(combo => combo.id === comboId);
-      const previousCombo = previousCombos.get(comboId);
-      if (!nextComboIds.has(comboId) || comboChanged(previousCombo, nextCombo)) {
-        delete state.current.comboProgress[comboId];
-      }
-    });
-
-    activeSettings().combos.forEach(combo => {
-      const previousCombo = previousCombos.get(combo.id);
-      if (comboChanged(previousCombo, combo)) {
-        state.current.comboProgress[combo.id] = { index: 0, sourceTransactionIds: [] };
-      }
-    });
+    // Current sequences are retired; existing awarded damage is untouched.
+    state.current.comboProgress = {};
 
     finalizeVictoryIfNeeded();
     saveState();
@@ -4689,8 +4635,8 @@
     }
 
     const raw = payload.settings;
-    if (!Array.isArray(raw.categories) || !Array.isArray(raw.actions) || !Array.isArray(raw.combos)) {
-      throw new Error('Template is missing categories, actions or combos.');
+    if (!Array.isArray(raw.categories) || !Array.isArray(raw.actions)) {
+      throw new Error('Template is missing categories or actions.');
     }
 
     const sourceStateVersion = templateSourceStateVersion(payload);
@@ -4738,7 +4684,7 @@
       const legacyTemplate = payload.version === LEGACY_TEMPLATE_VERSION;
 
       const confirmed = window.confirm(
-        'Switch to this MoLife settings template?\n\nThis replaces enemy HP, Focus/Chill tuning, categories/colors, Actions (type, damage, visibility, Required counts and order), medication definitions, and combos (multipliers and sequences). Your One-offs, progression, fight/mood and medication-taken history, today’s recorded damage and locked HP, Pawnshop items and onboarding state stay untouched.'
+        'Switch to this MoLife settings template?\n\nThis replaces enemy HP, Focus/Chill tuning, categories/colors, Actions (type, damage, visibility, Required counts and order), medication definitions, and other challenge settings. Your One-offs, progression, fight/mood and medication-taken history, today’s recorded damage and locked HP, Pawnshop items and onboarding state stay untouched.'
       );
       if (!confirmed) return;
 
@@ -4767,7 +4713,7 @@
 
       els.settingsMessage.textContent = `Template imported into ${activeProfileName()} and activated.`;
       if (els.templateStatus) {
-        els.templateStatus.textContent = `${legacyTemplate ? 'Legacy template upgraded · ' : ''}${importedName ? importedName + ' · ' : ''}${settingsDraft.categories.length - 1} categories · ${settingsDraft.actions.length} actions · ${settingsDraft.combos.length} combos`;
+        els.templateStatus.textContent = `${legacyTemplate ? 'Legacy template upgraded · ' : ''}${importedName ? importedName + ' · ' : ''}${settingsDraft.categories.length - 1} categories · ${settingsDraft.actions.length} actions`;
       }
     } catch (error) {
       console.warn('Could not import MoLife template:', error);
@@ -4803,7 +4749,7 @@
 
   function resetGameData() {
     const confirmed = window.confirm(
-      'Reset ALL MoLife game data?\n\nThis wipes all profiles, categories, actions, medication entries and history, One-offs, combos, Pawnshop items, mood history, fight history, Level, Street Cred and streaks. Your login/account remains.\n\nThe Crestfallen Department of Records will pretend none of this ever happened.'
+      'Reset ALL MoLife game data?\n\nThis wipes all profiles, categories, actions, medication entries and history, One-offs, Pawnshop items, mood history, fight history, Level, Street Cred and streaks. Your login/account remains.\n\nThe Crestfallen Department of Records will pretend none of this ever happened.'
     );
     if (!confirmed) return;
 
@@ -4901,7 +4847,7 @@
       || target === els.focusFactorInput
       || target === els.chillModeInput
       || target === els.chillMultiplierInput
-      || target.closest?.('.category-direct-editor, .action-direct-editor, .combo-direct-editor, .medication-direct-editor');
+      || target.closest?.('.category-direct-editor, .action-direct-editor, .medication-direct-editor');
 
     if (target === els.chillModeInput) syncChillSettingsControls();
     if (editsExistingSetting) {
@@ -4916,7 +4862,7 @@
       || target === els.focusFactorInput
       || target === els.chillModeInput
       || target === els.chillMultiplierInput
-      || target.closest?.('.category-direct-editor, .action-direct-editor, .combo-direct-editor, .medication-direct-editor')) {
+      || target.closest?.('.category-direct-editor, .action-direct-editor, .medication-direct-editor')) {
       scheduleSettingsSave(0);
     }
   });
@@ -4944,7 +4890,6 @@
   els.newActionRequired?.addEventListener('change', syncNewActionRequirementControls);
   els.addActionButton.addEventListener('click', addActionFromForm);
   els.addMedicationButton?.addEventListener('click', addMedicationFromForm);
-  els.addComboButton?.addEventListener('click', addComboFromForm);
   els.lootCrateButton?.addEventListener('click', claimVictoryLoot);
   els.closePawnshopItemButton?.addEventListener('click', closePawnshopItemDialog);
   els.pawnshopItemUseButton?.addEventListener('click', () => {
