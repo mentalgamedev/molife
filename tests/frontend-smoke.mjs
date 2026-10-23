@@ -51,6 +51,16 @@ if (missingIds.length) {
   fail(`JavaScript queries missing DOM ids: ${missingIds.join(', ')}`);
 }
 
+if (!html.includes('id="metricsCycleToggle"')
+    || !html.includes('id="metricsCycleOptions"')
+    || !html.includes('id="metricsCycleLegendPeriod"')
+    || !html.includes('id="metricsCycleLegendSpotting"')
+    || !metrics.includes('availableCycleRecords(')
+    || !metrics.includes('renderCycleBands(')
+    || !app.includes('window.MoLifeMetrics?.onIdentityChanged()')) {
+  fail('Mood / locally stored Cycle Tracker overlay and privacy boundaries are incomplete');
+}
+
 const localAssets = new Set();
 for (const match of html.matchAll(/<(?:link|script)\b[^>]*(?:href|src)="([^"]+)"[^>]*>/g)) {
   const asset = match[1];
@@ -252,10 +262,10 @@ if (!html.includes('id="medsPanel"')
     || !html.includes('id="medicationsSettingsDetails"')
     || !html.includes('id="newMedicationName"')
     || !html.includes('id="newMedicationDose"')
-    || !html.includes('meds.css?v=4.33')) {
-  fail('v4.33 collapsible mobile editors or medication UI missing');
+    || !html.includes('meds.css?v=4.34')) {
+  fail('v4.34 collapsible mobile editors or medication UI missing');
 }
-if (!serviceWorker.includes("'./meds.css?v=4.33'")) {
+if (!serviceWorker.includes("'./meds.css?v=4.34'")) {
   fail('Medication stylesheet is missing from offline app cache');
 }
 
