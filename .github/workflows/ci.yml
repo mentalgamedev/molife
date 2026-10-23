@@ -36,6 +36,9 @@ jobs:
       - name: Run Cycle Tracker privacy and data validation tests
         run: node tests/cycle-tracker.mjs
 
+      - name: Run order-independent Action and legacy Combo tests
+        run: node tests/combos-retirement.mjs
+
       - name: Run medication tracker regression tests
         run: node tests/medications.mjs
 
