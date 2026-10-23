@@ -1,6 +1,6 @@
 # MoLife — Menstrual-cycle tracking design
 
-**Status:** the manual local-only calendar is implemented in v4.32. Mood overlays, phase estimates and encrypted cloud sync are deferred. No reproductive-health records leave the browser.
+**Status:** manual local-only calendar shipped in v4.32, **observed cycle-date overlays on Mood** shipped in v4.34. Phase estimates, descriptive phase-grouped mood statistics, and encrypted cloud sync remain deferred. No reproductive-health records leave the browser.
 
 ## Product and accessibility
 
@@ -40,7 +40,7 @@ Use local calendar dates rather than UTC timestamps. Validate real dates, orderi
 
 ## Link to the Data Terminal (follow-up)
 
-Add **Show cycle context** as an optional overlay on the existing Mood chart once the user has cycle data. Mark *observed bleeding* with modest vertical calendar bands aligned to graph dates. If estimated phases are offered later, make the distinction visually and verbally explicit, show uncertainty and allow phase predictions to be disabled. Do not present ovulation/fertility estimates as contraception guidance.
+**Implemented in v4.34:** a default-off **Show recorded cycle dates** toggle on the Mood chart appears only for the current enabled local cycle store. Mark *observed bleeding/spotting* with modest vertical calendar bands aligned to graph dates, clear the overlay on dialog close or identity change, and never upload or infer unlogged days. If estimated phases are offered later, make the distinction visually and verbally explicit, show uncertainty and allow phase predictions to be disabled. Do not present ovulation/fertility estimates as contraception guidance.
 
 Show descriptive mood breakdowns by phase only when there are enough actual paired mood/cycle observations, label sample counts clearly and avoid claims of causation or diagnosis. A calendar-based phase estimate is not proof of a hormone concentration, ovulation or an individual's symptoms. Never fabricate missing Mood readings.
 
@@ -48,7 +48,7 @@ Show descriptive mood breakdowns by phase only when there are enough actual pair
 
 1. Dependency evaluation, threat model, mobile and accessible month-grid prototype.
 2. Separate opt-in local-only cycle store, manual logging, editing, deleting, exporting and privacy tests.
-3. Mood chart overlay for observed bleeding dates, then cautiously specified phase estimation and descriptive summaries.
+3. **Delivered v4.34:** Mood chart overlay for observed bleeding/spotting dates. Later: cautiously specified phase estimation and descriptive summaries.
 4. Optional encrypted cross-device sync as a distinct review and release, never an implicit addition.
 
 Acceptance tests: leap days, DST, cross-year ranges, overlapping corrections, irregular periods, no-period users, account/device isolation, offline calendar, missing mood data, mobile interactions, keyboard access, and leak scans of outgoing HTTP/saved cloud payloads. No pregnancy prevention, ovulation confirmation or medical advice is in scope.
