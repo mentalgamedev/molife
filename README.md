@@ -523,6 +523,14 @@ The primary and optional trend lines now connect available observations across d
 
 An opt-in menstrual-cycle calendar and optional descriptive mood/cycle comparison are designed in [docs/cycle-tracker-design.md](docs/cycle-tracker-design.md), but are not implemented in this release.
 
+## v4.32 — Office of Personal Chronology
+
+Opt-in **Cycle Tracker** opens from Settings with a local MIT-licensed Air Datepicker v3.6.0 calendar. Users may enter/edit/delete **observed** period or spotting intervals, optionally labeling period flow; no cycle prediction or medical advice is provided. Recorded dates are shaded in the calendar and listed for editing, with accessible date-input fallbacks.
+
+Sensitive records are saved separately in an **account-scoped, browser-local namespace**, never in cloud-synced application state, history, activity profiles or settings templates. Switching identities closes the tracker; successful account deletion also deletes that account's local cycle records on the current browser. Users can separately disable tracking while retaining their local entries, export a plaintext JSON copy, or delete all entries with confirmation. The UI warns this is **not encrypted**, might be readable on a shared device and is not backed up by cloud sync. The bundled calendar, CSS and license live under `vendor/` for offline availability.
+
+Main state schema remains **v14**; there is no SQL migration or change to battle/combo/medication behavior. Phase estimates, Mood overlays and optional encrypted cross-device sync remain separate follow-up features described in [the design](docs/cycle-tracker-design.md).
+
 ## Self-hosting
 
 See [DEPLOY.md](DEPLOY.md) for the provider-neutral self-hosting guide.
