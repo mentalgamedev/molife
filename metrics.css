@@ -280,7 +280,6 @@
 
 .metrics-cycle-period,
 .metrics-cycle-spotting {
-  pointer-events: none;
   shape-rendering: crispEdges;
 }
 
