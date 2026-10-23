@@ -1,6 +1,6 @@
 # MoLife — Menstrual-cycle tracking design
 
-**Status:** design only (v4.31). No period data is collected or synced by this release.
+**Status:** the manual local-only calendar is implemented in v4.32. Mood overlays, phase estimates and encrypted cloud sync are deferred. No reproductive-health records leave the browser.
 
 ## Product and accessibility
 
@@ -10,7 +10,9 @@ First release: a monthly calendar supporting manual entry, editing and deletion 
 
 ## Reuse an existing calendar
 
-Prefer evaluating **FullCalendar Standard v7** (vanilla JavaScript month/dayGrid plus interaction modules), licensed MIT: https://fullcalendar.io/license and https://fullcalendar.io/docs/vanilla-js. It provides a mature UI for month navigation, event display and date selection; it does *not* supply cycle logic, medical predictions or privacy controls. Only use Standard plugins, not Premium/Scheduler.
+The original candidate was **FullCalendar Standard v7** (vanilla JavaScript month/dayGrid plus interaction modules), licensed MIT: https://fullcalendar.io/license and https://fullcalendar.io/docs/vanilla-js. It provides a mature UI for month navigation, event display and date selection; it does *not* supply cycle logic, medical predictions or privacy controls. Only use Standard plugins, not Premium/Scheduler.
+
+**Shipped implementation:** [Air Datepicker v3.6.0](https://air-datepicker.com/), a smaller, dependency-free MIT calendar, pinned to local `vendor/` assets. Shaded day cells show recorded periods/spotting. Native date inputs provide keyboard editing.
 
 This repo is a dependency-light, frameworkless PWA. Compare the actual distribution footprint against smaller MIT calendars before choosing. Pin a supported version, preserve license notices, ship the needed build locally (no runtime CDN), load lazily only for opted-in users, and add the assets to the service-worker cache for offline use.
 
