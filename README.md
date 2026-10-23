@@ -535,6 +535,14 @@ Main state schema remains **v14**; there is no SQL migration or change to battle
 
 Fixes Air Datepicker's bundled default Russian calendar: month names and weekday labels now follow the browser locale (with English fallback), including regional first-day-of-week conventions. The rest of MoLife remains in English. No cycle-data or state migration is needed; the Cycle Tracker script and service-worker cache version are updated to invalidate the earlier offline assets.
 
+## v4.33 — Bureau of Retroactive Productivity
+
+**Combos are retired.** MoLife supports retrospectively logging a day's activities in any order. No new Combo progress or bonus attacks are produced; their Track-o-Tron panel, Settings editor, attack feedback, victory statistics, Newswire references and editor styles are removed. Old Combo settings are discarded across profiles and imported templates. The empty `combos: []` and `comboProgress: {}` fields remain for compatibility with the existing v14 cloud validator.
+
+**Historical integrity:** Past earned Combo bonus transactions and newspaper reports are preserved. Damage, XP, victory state, archived fights and Data Terminal statistics remain intact. Existing bonus transactions in today's fight log appear as *Legacy bonus*, and Undo removes dependent previously-awarded bonuses if their source action is undone. No new order-based rewards can be earned.
+
+Main state schema remains **v14**; no SQL migration. PWA cache bumped to 4.33.
+
 ## Self-hosting
 
 See [DEPLOY.md](DEPLOY.md) for the provider-neutral self-hosting guide.
