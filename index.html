@@ -9,13 +9,15 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="preload" href="fonts/PunkKid.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=4.31">
-  <link rel="stylesheet" href="pawnshop.css?v=4.31">
-  <link rel="stylesheet" href="mood.css?v=4.31">
-  <link rel="stylesheet" href="meds.css?v=4.31">
-  <link rel="stylesheet" href="metrics.css?v=4.31">
-  <link rel="stylesheet" href="settings.css?v=4.31">
-  <link rel="stylesheet" href="info.css?v=4.31">
+  <link rel="stylesheet" href="styles.css?v=4.32">
+  <link rel="stylesheet" href="pawnshop.css?v=4.32">
+  <link rel="stylesheet" href="mood.css?v=4.32">
+  <link rel="stylesheet" href="meds.css?v=4.32">
+  <link rel="stylesheet" href="vendor/air-datepicker.css?v=4.32">
+  <link rel="stylesheet" href="cycle.css?v=4.32">
+  <link rel="stylesheet" href="metrics.css?v=4.32">
+  <link rel="stylesheet" href="settings.css?v=4.32">
+  <link rel="stylesheet" href="info.css?v=4.32">
 </head>
 <body>
   <div class="city-noise" aria-hidden="true"></div>
@@ -34,7 +36,7 @@
       <div class="brand-block">
         <h1 class="brand-title" aria-label="MoLife"><span class="brand-mo">Mo</span><span class="brand-life">Life</span><span class="brand-tm">™</span></h1>
         <div class="brand-subline"><strong>Daily Struggle Assistant</strong><span> · powered by MoThink-6.7</span></div>
-        <div class="app-version" aria-label="MoLife version 4.31">v4.31 · Bureau of Graphical Continuity</div>
+        <div class="app-version" aria-label="MoLife version 4.32">v4.32 · Office of Personal Chronology</div>
         <div id="todayLabel" class="muted"></div>
       </div>
       <div class="topbar-actions">
@@ -457,6 +459,51 @@
     </article>
   </dialog>
 
+  <dialog id="cycleDialog" class="cycle-dialog" aria-labelledby="cycleTitle" aria-describedby="cyclePrivacyNote">
+    <section class="cycle-card">
+      <header class="cycle-head">
+        <div>
+          <div class="eyebrow">OFFICE OF PERSONAL CHRONOLOGY // PRIVATE DOSSIER</div>
+          <h2 id="cycleTitle">Cycle Tracker</h2>
+        </div>
+        <button id="closeCycleButton" class="icon-button" type="button" aria-label="Close Cycle Tracker">×</button>
+      </header>
+      <p id="cyclePrivacyNote" class="cycle-privacy">Optional records stay in this browser, separately from MoLife cloud sync. They are <strong>not encrypted</strong>: anyone with access to this device/browser may be able to read them. Browser data clearing or changing devices can erase them. Not a medical, fertility or contraception tool.</p>
+      <div id="cycleOptInArea" class="cycle-opt-in">
+        <p>No cycle dates are collected until you enable tracking. You can later disable tracking without losing records or delete them entirely.</p>
+        <button id="cycleEnableButton" type="button" class="primary-button">Enable on this device</button>
+      </div>
+      <div id="cycleActiveArea" class="cycle-active" hidden>
+        <p class="cycle-instructions">Tap a day to start a new entry, then another day to set its end. Shaded days open existing entries. Or use the date fields below. Only actual observations are recorded.</p>
+        <div id="cycleCalendar" class="cycle-calendar" aria-label="Cycle history calendar"></div>
+        <div class="cycle-legend"><span class="cycle-period-swatch">Period</span><span class="cycle-spotting-swatch">Spotting</span><span>Unmarked = no recorded observation</span></div>
+        <div class="cycle-editor">
+          <div class="cycle-form-grid">
+            <label>First day<input id="cycleStart" type="date" required></label>
+            <label>Last day<input id="cycleEnd" type="date" required></label>
+            <label>Type<select id="cycleKind"><option value="period">Period</option><option value="spotting">Spotting</option></select></label>
+            <label>Flow (optional)<select id="cycleFlow"><option value="unspecified">Not specified</option><option value="light">Light</option><option value="medium">Medium</option><option value="heavy">Heavy</option></select></label>
+          </div>
+          <div class="cycle-actions">
+            <button id="cycleSaveButton" type="button" class="primary-button">Save entry</button>
+            <button id="cycleNewButton" type="button" class="secondary-button">New entry</button>
+            <button id="cycleDeleteEntryButton" type="button" class="danger-button" hidden>Delete selected</button>
+          </div>
+        </div>
+        <div class="cycle-history">
+          <h3>Recorded intervals</h3>
+          <div id="cycleEntriesList" class="cycle-entries"></div>
+        </div>
+        <button id="cycleDisableButton" type="button" class="secondary-button">Disable tracking (keep records)</button>
+      </div>
+      <div class="cycle-data-actions">
+        <button id="cycleExportButton" type="button" class="secondary-button" disabled>Export local records</button>
+        <button id="cycleDeleteAllButton" type="button" class="danger-button" disabled>Delete all cycle records</button>
+      </div>
+      <p id="cycleMessage" class="cycle-message" role="status" aria-live="polite"></p>
+    </section>
+  </dialog>
+
   <dialog id="settingsDialog" class="settings-dialog">
     <form method="dialog" class="settings-card" id="settingsForm">
       <div class="settings-head">
@@ -640,6 +687,17 @@
         </details>
       </section>
 
+      <section class="settings-section cycle-settings-section">
+        <div class="settings-section-head">
+          <div>
+            <h3>Cycle Tracker</h3>
+            <p>Optional period and spotting calendar. Sensitive dates remain only in this browser, not in cloud sync, activity profiles or settings templates.</p>
+          </div>
+          <button id="cycleSettingsButton" class="secondary-button" type="button">Open calendar</button>
+        </div>
+        <p id="cycleSettingsStatus" class="category-fallback-note">OPEN TO VIEW LOCAL STATUS</p>
+      </section>
+
       <section class="settings-section">
         <div class="settings-section-head">
           <div>
@@ -757,8 +815,11 @@
     </article>
   </template>
 
-  <script src="app.js?v=4.31" defer></script>
-  <script src="metrics-viewer.js?v=4.31" defer></script>
-  <script src="cloud.js?v=4.31" defer></script>
+  <script src="app.js?v=4.32" defer></script>
+  <script src="vendor/air-datepicker.js?v=4.32" defer></script>
+  <script src="cycle-data.js?v=4.32" defer></script>
+  <script src="cycle-tracker.js?v=4.32" defer></script>
+  <script src="metrics-viewer.js?v=4.32" defer></script>
+  <script src="cloud.js?v=4.32" defer></script>
 </body>
 </html>
