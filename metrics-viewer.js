@@ -202,7 +202,7 @@
 
   function resolvedAxis(metric, recorded, trend) {
     if (!metric.dynamicAxis) return metric;
-    const peak = Math.max(1, ...recorded, ...trend.filter(value => value !== null));
+    const peak = Math.max(4, ...recorded, ...trend.filter(value => value !== null));
     const roughStep = peak / 4;
     const magnitude = 10 ** Math.floor(Math.log10(roughStep));
     const multiplier = [1, 2, 2.5, 5, 10].find(candidate => candidate * magnitude >= roughStep) || 10;
