@@ -54,6 +54,7 @@ class Calendar {
 const window = {
   DalliApp: { getStorageKey: () => identity },
   AirDatepicker: Calendar,
+  navigator: { language: 'de-AT' },
   confirm: () => true,
   setTimeout: () => 0,
   URL: URL
@@ -101,6 +102,10 @@ assert.equal(values.size, 0, 'open does not create or sync records');
 trigger('cycleEnableButton');
 assert.equal(data.read(identity).enabled, true);
 assert.equal(mockCalendarInstances.length, 1);
+assert.equal(mockCalendarInstances[0].opts.locale.months[9], 'Oktober', 'browser German locale applied');
+assert.equal(mockCalendarInstances[0].opts.locale.days[0], 'Sonntag', 'weekday labels localized');
+assert.equal(mockCalendarInstances[0].opts.locale.firstDay, 1, 'Austrian calendar begins Monday');
+assert.equal(mockCalendarInstances[0].opts.locale.daysMin[0], 'So');
 assert.equal(els.get('cycleActiveArea').hidden, false);
 
 els.get('cycleStart').value = '2024-02-28';
@@ -130,7 +135,11 @@ trigger('cycleSettingsButton');
 assert.equal(data.read(identity).entries.length, 0);
 assert.equal(els.get('cycleEntriesList').children.length, 1, 'empty-state only');
 assert.equal(data.read('dailyXpGame.v2').entries.length, 1, 'guest history is preserved but isolated');
+window.navigator.language = 'en-US';
 trigger('cycleEnableButton');
+assert.equal(mockCalendarInstances.at(-1).opts.locale.months[9], 'October', 'English browser locale applied');
+assert.equal(mockCalendarInstances.at(-1).opts.locale.days[0], 'Sunday');
+assert.equal(mockCalendarInstances.at(-1).opts.locale.firstDay, 0, 'US calendar begins Sunday');
 trigger('cycleDisableButton');
 assert.equal(data.read(identity).enabled, false);
 tracker.deleteAccountData(identity);
@@ -141,6 +150,7 @@ assert.ok(app.includes('window.MoLifeCycle?.onIdentityChanged()'), 'app identity
 assert.ok(cloud.includes('window.MoLifeCycle?.deleteAccountData(userStorageKey(deletedUserId))'), 'account deletion purges local cycle records');
 assert.ok(!html.includes('https://unpkg.com') && !html.includes('cdn.jsdelivr.net'), 'calendar loaded locally');
 assert.ok(html.includes('vendor/air-datepicker.js?v=4.32'), 'pinned calendar asset');
+assert.ok(html.includes('cycle-tracker.js?v=4.32.1'), 'locale fix loads fresh script instead of cached version');
 assert.ok(!app.includes('molife.cycle.local.v1'), 'sensitive store isolated from normal app state');
 assert.ok(!cloud.includes('molife.cycle.local.v1'), 'sensitive store isolated from cloud sync');
 assert.ok(!html.includes('cycleCalendar" data-sync'), 'no cycle data attached to sync');
