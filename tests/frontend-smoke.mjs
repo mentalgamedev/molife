@@ -12,6 +12,8 @@ const html = read('index.html');
 const app = read('app.js');
 const cloud = read('cloud.js');
 const metrics = read('metrics-viewer.js');
+const cycle = read('cycle-tracker.js');
+const cycleData = read('cycle-data.js');
 const serviceWorker = read('service-worker.js');
 const manifest = read('manifest.webmanifest');
 const deleteAccountApi = read('api/delete-account.php');
@@ -20,6 +22,7 @@ const cssFiles = [
   'pawnshop.css',
   'mood.css',
   'meds.css',
+  'cycle.css',
   'metrics.css',
   'settings.css',
   'info.css'
@@ -36,7 +39,7 @@ if (duplicateIds.length) {
 }
 
 const knownIds = new Set(ids);
-const scripts = [app, cloud, metrics];
+const scripts = [app, cloud, metrics, cycle, cycleData];
 const queriedIds = new Set();
 scripts.forEach(source => {
   for (const match of source.matchAll(/querySelector\(\s*['"]#([A-Za-z0-9_-]+)['"]\s*\)/g)) {
@@ -249,10 +252,10 @@ if (!html.includes('id="medsPanel"')
     || !html.includes('id="medicationsSettingsDetails"')
     || !html.includes('id="newMedicationName"')
     || !html.includes('id="newMedicationDose"')
-    || !html.includes('meds.css?v=4.31')) {
-  fail('v4.31 collapsible mobile editors or medication UI missing');
+    || !html.includes('meds.css?v=4.32')) {
+  fail('v4.32 collapsible mobile editors or medication UI missing');
 }
-if (!serviceWorker.includes("'./meds.css?v=4.31'")) {
+if (!serviceWorker.includes("'./meds.css?v=4.32'")) {
   fail('Medication stylesheet is missing from offline app cache');
 }
 
