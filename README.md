@@ -515,6 +515,14 @@ Actions and Medications editors are collapsible in Settings so mobile users don'
 
 State schema advances **v13 → v14**, with compatible client migrations and matching strict server-side validation. No SQL migration is required. Existing v13 accounts and templates preserve all previous settings and progression.
 
+## v4.31 — Bureau of Graphical Continuity
+
+The Data Terminal is available via a compact graph icon in the main header; Mood's **View trend** still opens Mood directly. Its title and labels are general-purpose. **Damage dealt** is a second provider, using archived fight totals and today's current action/combo/item transactions. Missing fight archives remain missing, and recorded zero-damage days stay zero. The damage y-axis adapts to the selected range.
+
+The primary and optional trend lines now connect available observations across dates without readings. These lines do not interpolate, store or include absent readings in coverage or averages. No new saved fields or SQL migration are required.
+
+An opt-in menstrual-cycle calendar and optional descriptive mood/cycle comparison are designed in [docs/cycle-tracker-design.md](docs/cycle-tracker-design.md), but are not implemented in this release.
+
 ## Self-hosting
 
 See [DEPLOY.md](DEPLOY.md) for the provider-neutral self-hosting guide.

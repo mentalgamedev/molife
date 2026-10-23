@@ -249,10 +249,10 @@ if (!html.includes('id="medsPanel"')
     || !html.includes('id="medicationsSettingsDetails"')
     || !html.includes('id="newMedicationName"')
     || !html.includes('id="newMedicationDose"')
-    || !html.includes('meds.css?v=4.30')) {
-  fail('v4.30 collapsible mobile editors or medication UI missing');
+    || !html.includes('meds.css?v=4.31')) {
+  fail('v4.31 collapsible mobile editors or medication UI missing');
 }
-if (!serviceWorker.includes("'./meds.css?v=4.30'")) {
+if (!serviceWorker.includes("'./meds.css?v=4.31'")) {
   fail('Medication stylesheet is missing from offline app cache');
 }
 

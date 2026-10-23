@@ -9,13 +9,13 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="preload" href="fonts/PunkKid.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=4.30">
-  <link rel="stylesheet" href="pawnshop.css?v=4.30">
-  <link rel="stylesheet" href="mood.css?v=4.30">
-  <link rel="stylesheet" href="meds.css?v=4.30">
-  <link rel="stylesheet" href="metrics.css?v=4.30">
-  <link rel="stylesheet" href="settings.css?v=4.30">
-  <link rel="stylesheet" href="info.css?v=4.30">
+  <link rel="stylesheet" href="styles.css?v=4.31">
+  <link rel="stylesheet" href="pawnshop.css?v=4.31">
+  <link rel="stylesheet" href="mood.css?v=4.31">
+  <link rel="stylesheet" href="meds.css?v=4.31">
+  <link rel="stylesheet" href="metrics.css?v=4.31">
+  <link rel="stylesheet" href="settings.css?v=4.31">
+  <link rel="stylesheet" href="info.css?v=4.31">
 </head>
 <body>
   <div class="city-noise" aria-hidden="true"></div>
@@ -34,10 +34,16 @@
       <div class="brand-block">
         <h1 class="brand-title" aria-label="MoLife"><span class="brand-mo">Mo</span><span class="brand-life">Life</span><span class="brand-tm">™</span></h1>
         <div class="brand-subline"><strong>Daily Struggle Assistant</strong><span> · powered by MoThink-6.7</span></div>
-        <div class="app-version" aria-label="MoLife version 4.30">v4.30 · Department of Responsible Checkmarks</div>
+        <div class="app-version" aria-label="MoLife version 4.31">v4.31 · Bureau of Graphical Continuity</div>
         <div id="todayLabel" class="muted"></div>
       </div>
       <div class="topbar-actions">
+        <button class="icon-button metrics-shortcut" type="button" data-open-metric="" aria-label="Open Data Terminal" title="Data Terminal">
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 4v16h18"/>
+            <polyline points="6,16 11,11 15,13 21,5"/>
+          </svg>
+        </button>
         <button id="infoButton" class="icon-button info-button" type="button" aria-label="About MoLife" title="About MoLife"><span aria-hidden="true">i</span></button>
         <button id="settingsButton" class="icon-button" type="button" aria-label="Open settings" title="Settings">⚙</button>
       </div>
@@ -229,7 +235,6 @@
               <div class="eyebrow">FIGHT ARCHIVES</div>
               <h2>Recent days</h2>
             </div>
-            <button class="metrics-open-button" type="button" data-open-metric="mood">Data terminal</button>
           </div>
           <div id="historyList" class="history-list"></div>
         </div>
@@ -288,6 +293,7 @@
           <span>Metric</span>
           <select id="metricsMetricSelect">
             <option value="mood">Mood</option>
+            <option value="damage">Damage dealt</option>
           </select>
         </label>
 
@@ -338,18 +344,18 @@
       </div>
 
       <div class="metrics-chart-shell">
-        <svg id="metricsChart" class="metrics-chart" role="img" aria-label="Mood history chart"></svg>
-        <div id="metricsChartEmpty" class="metrics-chart-empty">No readings in this range. The Committee declines to fabricate emotional evidence.</div>
+        <svg id="metricsChart" class="metrics-chart" role="img" aria-label="Historical metric chart"></svg>
+        <div id="metricsChartEmpty" class="metrics-chart-empty">No readings in this range. The Committee declines to fabricate evidence.</div>
       </div>
 
       <div class="metrics-legend" aria-hidden="true">
         <span><i></i> Daily reading</span>
         <span class="is-trend"><i></i> 7-day trend</span>
-        <span class="is-baseline"><i></i> Balanced baseline</span>
+        <span class="is-baseline"><i></i> <span id="metricsBaselineLabel">balanced baseline</span></span>
       </div>
       <p id="metricsChartCaption" class="metrics-chart-caption"></p>
-      <p id="metricsRangeNote" class="metrics-range-note">Missing days remain gaps. Balanced is the zero baseline, not a substitute for missing data.</p>
-      <p class="metrics-disclaimer">Mood is a self-reported daily signal, not a diagnosis. NOTICE 04:20: the Joint Committee confirms these statistics may be slightly elevated.</p>
+      <p id="metricsRangeNote" class="metrics-range-note">Lines connect recorded points without filling in missing dates.</p>
+      <p id="metricsDisclaimer" class="metrics-disclaimer">NOTICE 04:20: the Joint Committee confirms these statistics may be slightly elevated.</p> 
     </section>
   </dialog>
 
@@ -751,8 +757,8 @@
     </article>
   </template>
 
-  <script src="app.js?v=4.30" defer></script>
-  <script src="metrics-viewer.js?v=4.30" defer></script>
-  <script src="cloud.js?v=4.30" defer></script>
+  <script src="app.js?v=4.31" defer></script>
+  <script src="metrics-viewer.js?v=4.31" defer></script>
+  <script src="cloud.js?v=4.31" defer></script>
 </body>
 </html>

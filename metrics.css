@@ -1,8 +1,9 @@
 /* MoLife v4.20 — Joint Committee on Higher Metrics */
 
-[data-open-metric] {
-  cursor: pointer;
-}
+[data-open-metric] { cursor: pointer; }
+
+.metrics-shortcut { display: inline-flex; align-items: center; justify-content: center; }
+.metrics-shortcut svg { display: block; width: 19px; height: 19px; }
 
 .mood-actions {
   display: flex;
@@ -16,8 +17,7 @@
   margin: 0;
 }
 
-.mood-trends-button,
-.metrics-open-button {
+.mood-trends-button {
   flex: 0 0 auto;
   min-height: 34px;
   padding: 7px 10px;
@@ -31,8 +31,7 @@
   text-transform: uppercase;
 }
 
-.mood-trends-button:hover,
-.metrics-open-button:hover {
+.mood-trends-button:hover {
   border-color: rgba(129, 139, 255, .42);
   background: rgba(129, 139, 255, .11);
   color: #d4d8ff;

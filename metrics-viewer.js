@@ -19,6 +19,8 @@
   const lowValue = document.querySelector('#metricsLowValue');
   const highValue = document.querySelector('#metricsHighValue');
   const rangeNote = document.querySelector('#metricsRangeNote');
+  const baselineLabel = document.querySelector('#metricsBaselineLabel');
+  const disclaimer = document.querySelector('#metricsDisclaimer');
   const closeButton = document.querySelector('#closeMetricsButton');
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -100,7 +102,28 @@
         const rounded = Math.round(value * 10) / 10;
         const signed = rounded > 0 ? `+${rounded}` : String(rounded);
         return compact ? signed : `${moodBand(value)} · ${signed}`;
-      }
+      },
+      disclaimer: 'Mood is a self-reported daily signal, not a diagnosis.'
+    }),
+    damage: Object.freeze({
+      id: 'damage',
+      label: 'Damage dealt',
+      baseline: 0,
+      baselineLabel: 'ZERO DAMAGE',
+      dynamicAxis: true,
+      read(state, dateKey, historyByDate) {
+        if (state?.current?.date === dateKey) {
+          return (state.current.transactions || []).reduce(
+            (total, tx) => total + Math.max(0, Number(tx.damage) || 0), 0
+          );
+        }
+        const day = historyByDate.get(dateKey);
+        return day && Number.isFinite(Number(day.damage)) ? Math.max(0, Number(day.damage)) : null;
+      },
+      format(value) {
+        return Number.isFinite(value) ? `${Math.round(value).toLocaleString()} DMG` : '—';
+      },
+      disclaimer: 'Damage includes Actions, combos and items. Recorded fight days with no damage count as zero; missing archives remain unrecorded.'
     })
   });
 
@@ -158,8 +181,8 @@
     return node;
   }
 
-  function yFor(value, metric, top, height) {
-    const ratio = (metric.max - value) / Math.max(1, metric.max - metric.min);
+  function yFor(value, axis, top, height) {
+    const ratio = (axis.max - value) / Math.max(1, axis.max - axis.min);
     return top + (ratio * height);
   }
 
@@ -168,25 +191,38 @@
     return left + ((index / (count - 1)) * width);
   }
 
+  // Connect recorded observations even when intermediate dates were not logged.
+  // X positions remain date-based: missing measurements are not interpolated or saved.
   function rawPath(points) {
-    let d = '';
-    let drawing = false;
-    points.forEach(point => {
-      if (point.value === null) {
-        drawing = false;
-        return;
-      }
-      d += `${drawing ? ' L' : ' M'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
-      drawing = true;
-    });
-    return d.trim();
+    return points
+      .filter(point => point.value !== null)
+      .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+      .join(' ');
   }
 
-  function trendSeries(state, metric, dates) {
+  function resolvedAxis(metric, recorded, trend) {
+    if (!metric.dynamicAxis) return metric;
+    const peak = Math.max(1, ...recorded, ...trend.filter(value => value !== null));
+    const roughStep = peak / 4;
+    const magnitude = 10 ** Math.floor(Math.log10(roughStep));
+    const multiplier = [1, 2, 2.5, 5, 10].find(candidate => candidate * magnitude >= roughStep) || 10;
+    const step = multiplier * magnitude;
+    return {
+      min: 0,
+      max: step * 4,
+      baseline: 0,
+      ticks: [4, 3, 2, 1, 0].map(index => ({
+        value: index * step,
+        label: `${Math.round(index * step).toLocaleString()} DMG`
+      }))
+    };
+  }
+
+  function trendSeries(state, metric, dates, historyByDate) {
     return dates.map(dateKey => {
       const values = [];
       for (let offset = -6; offset <= 0; offset += 1) {
-        const value = metric.read(state, addDays(dateKey, offset));
+        const value = metric.read(state, addDays(dateKey, offset), historyByDate);
         if (value !== null) values.push(value);
       }
       if (values.length < 2) return null;
@@ -211,9 +247,11 @@
     const metric = activeMetric();
     const range = resolvedRange();
     const dates = enumerateDates(range.start, range.end);
-    const values = dates.map(dateKey => metric.read(state, dateKey));
+    const historyByDate = new Map((state.history || []).map(day => [day.date, day]));
+    const values = dates.map(dateKey => metric.read(state, dateKey, historyByDate));
     const recorded = values.filter(value => value !== null);
-    const trend = trendToggle?.checked ? trendSeries(state, metric, dates) : [];
+    const trend = trendToggle?.checked ? trendSeries(state, metric, dates, historyByDate) : [];
+    const axis = resolvedAxis(metric, recorded, trend);
 
     chart.replaceChildren();
 
@@ -230,11 +268,13 @@
     chart.setAttribute('viewBox', `0 0 ${viewWidth} ${viewHeight}`);
     chart.setAttribute('preserveAspectRatio', 'xMidYMid meet');
     chart.style.aspectRatio = `${viewWidth} / ${viewHeight}`;
-    if (dialogTitle) dialogTitle.textContent = `${metric.label} Data Terminal`;
+    if (dialogTitle) dialogTitle.textContent = 'Data Terminal';
+    if (baselineLabel) baselineLabel.textContent = `${metric.baselineLabel.toLowerCase()} baseline`;
+    if (disclaimer) disclaimer.textContent = `${metric.disclaimer} NOTICE 04:20: the Joint Committee confirms these statistics may be slightly elevated.`;
 
-    metric.ticks.forEach(tick => {
-      const y = yFor(tick.value, metric, top, plotHeight);
-      const baseline = tick.value === metric.baseline;
+    axis.ticks.forEach(tick => {
+      const y = yFor(tick.value, axis, top, plotHeight);
+      const baseline = tick.value === axis.baseline;
       chart.append(
         svgNode('line', {
           x1: left,
@@ -258,7 +298,7 @@
         dateKey,
         value,
         x: xFor(index, dates.length, left, plotWidth),
-        y: value === null ? null : yFor(value, metric, top, plotHeight)
+        y: value === null ? null : yFor(value, axis, top, plotHeight)
       };
     });
 
@@ -277,7 +317,7 @@
           dateKey,
           value,
           x: xFor(index, dates.length, left, plotWidth),
-          y: value === null ? null : yFor(value, metric, top, plotHeight)
+          y: value === null ? null : yFor(value, axis, top, plotHeight)
         };
       });
       const trendD = rawPath(trendPoints);
@@ -349,14 +389,14 @@
 
     const missingCount = dates.length - recorded.length;
     chartCaption.textContent = recorded.length
-      ? `${formatLongDate(range.start)} – ${formatLongDate(range.end)} · ${missingCount} unlogged day${missingCount === 1 ? '' : 's'} shown as gaps`
+      ? `${formatLongDate(range.start)} – ${formatLongDate(range.end)} · ${missingCount} day${missingCount === 1 ? '' : 's'} without readings; lines bridge missing days`
       : `${formatLongDate(range.start)} – ${formatLongDate(range.end)} · no readings recorded in this range`;
 
     rangeNote.textContent = range.clipped
       ? 'Custom views are limited to 3,660 calendar days. The earliest part of this range was clipped.'
       : trendToggle?.checked
-        ? 'Dashed 7-day trend averages available readings only. Missing days are never treated as Balanced.'
-        : 'Missing days remain gaps. Balanced is the zero baseline, not a substitute for missing data.';
+        ? 'Dashed 7-day trend averages available readings only. Lines bridge missing dates without imputing readings.'
+        : 'Lines connect recorded points across unrecorded dates; no missing values are filled in.';
 
     chart.setAttribute(
       'aria-label',
@@ -377,7 +417,7 @@
     renderGraph();
   }
 
-  function openMetric(metricId = 'mood') {
+  function openMetric(metricId = null) {
     if (METRICS[metricId]) metricSelect.value = metricId;
 
     const today = localDateKey();
@@ -399,7 +439,7 @@
   }
 
   document.querySelectorAll('[data-open-metric]').forEach(button => {
-    button.addEventListener('click', () => openMetric(button.dataset.openMetric || 'mood'));
+    button.addEventListener('click', () => openMetric(button.dataset.openMetric || null));
   });
 
   rangeButtons.forEach(button => {
