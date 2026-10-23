@@ -4505,8 +4505,6 @@
       return { ok: false, message: 'Every action needs a name.' };
     }
 
-    const actionIds = new Set(actions.map(action => action.id));
-    const enabledSequences = new Set();
     if (settingsDraft.medications.some(med => !String(med.name || '').trim())) {
       return { ok: false, message: 'Every medication entry needs a name.' };
     }
