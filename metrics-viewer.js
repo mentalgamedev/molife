@@ -507,8 +507,17 @@
     else dialog.setAttribute('open', '');
   }
 
-  function closeMetrics() {
+  function clearCycleDisplay() {
     if (cycleToggle) cycleToggle.checked = false;
+    if (cycleOptions) cycleOptions.hidden = true;
+    if (cycleLegendPeriod) cycleLegendPeriod.hidden = true;
+    if (cycleLegendSpotting) cycleLegendSpotting.hidden = true;
+    // Clear locally derived health information from the closed dialog.
+    chart?.replaceChildren();
+  }
+
+  function closeMetrics() {
+    clearCycleDisplay();
     if (!dialog.open && !dialog.hasAttribute('open')) return;
     if (typeof dialog.close === 'function') dialog.close();
     else dialog.removeAttribute('open');
@@ -535,6 +544,7 @@
   dialog.addEventListener('click', event => {
     if (event.target === dialog) closeMetrics();
   });
+  dialog.addEventListener('close', clearCycleDisplay);
 
   window.addEventListener('resize', () => {
     if (dialog.open) renderGraph();
@@ -542,11 +552,7 @@
 
   function onIdentityChanged() {
     // An account/session switch must not leave a previous person's health overlay visible.
-    if (cycleToggle) cycleToggle.checked = false;
-    chart?.replaceChildren();
-    if (cycleOptions) cycleOptions.hidden = true;
-    if (cycleLegendPeriod) cycleLegendPeriod.hidden = true;
-    if (cycleLegendSpotting) cycleLegendSpotting.hidden = true;
+    clearCycleDisplay();
     if (dialog.open) closeMetrics();
   }
 
