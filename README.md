@@ -531,6 +531,10 @@ Sensitive records are saved separately in an **account-scoped, browser-local nam
 
 Main state schema remains **v14**; there is no SQL migration or change to battle/combo/medication behavior. Phase estimates, Mood overlays and optional encrypted cross-device sync remain separate follow-up features described in [the design](docs/cycle-tracker-design.md).
 
+## v4.32.1 — Department of Unauthorized Translation
+
+Fixes Air Datepicker's bundled default Russian calendar: month names and weekday labels now follow the browser locale (with English fallback), including regional first-day-of-week conventions. The rest of MoLife remains in English. No cycle-data or state migration is needed; the Cycle Tracker script and service-worker cache version are updated to invalidate the earlier offline assets.
+
 ## Self-hosting
 
 See [DEPLOY.md](DEPLOY.md) for the provider-neutral self-hosting guide.

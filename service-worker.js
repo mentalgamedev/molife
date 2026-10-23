@@ -1,4 +1,4 @@
-const CACHE = 'molife-v4-32';
+const CACHE = 'molife-v4-32-1';
 const ASSETS = [
   './',
   './index.html',
@@ -15,7 +15,7 @@ const ASSETS = [
   './metrics-viewer.js?v=4.32',
   './vendor/air-datepicker.js?v=4.32',
   './cycle-data.js?v=4.32',
-  './cycle-tracker.js?v=4.32',
+  './cycle-tracker.js?v=4.32.1',
   './cloud.js?v=4.32',
   './manifest.webmanifest',
   './icon.svg',

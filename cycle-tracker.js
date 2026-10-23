@@ -106,6 +106,56 @@
     notify('Editing ' + friendly(entry.start) + ' – ' + friendly(entry.end) + '. Save changes or delete this entry.');
   }
 
+  // Air Datepicker defaults to Russian unless its locale is supplied explicitly.
+  // Build month/weekday labels from the browser language without shipping locale packs.
+  function calendarLocale() {
+    const preferred = window.navigator?.language || document.documentElement?.lang || 'en';
+    let language = 'en';
+    try {
+      language = Intl.getCanonicalLocales(preferred)[0] || 'en';
+    } catch (error) {
+      // Invalid or unavailable browser locale: keep the calendar in English.
+    }
+
+    const dates = (count, offset) => Array.from({ length: count }, (_, index) =>
+      new Date(Date.UTC(2024, offset ? index : 0, offset ? 15 : 7 + index, 12))
+    );
+    const days = dates(7, false);
+    const months = dates(12, true);
+    const labels = (items, field, width) => {
+      const formatter = new Intl.DateTimeFormat(language, { [field]: width, timeZone: 'UTC' });
+      return items.map(date => formatter.format(date));
+    };
+    const daysShort = labels(days, 'weekday', 'short');
+    let firstDay = 1;
+    try {
+      const locale = new Intl.Locale(language);
+      const declared = locale.weekInfo?.firstDay;
+      if (Number.isInteger(declared) && declared >= 1 && declared <= 7) firstDay = declared % 7;
+    } catch (error) {
+      // Older browsers keep a predictable Monday-first calendar.
+    }
+
+    const controls = {
+      de: { today: 'Heute', clear: 'Löschen' },
+      es: { today: 'Hoy', clear: 'Borrar' }
+    };
+    const strings = controls[language.split('-')[0]] || { today: 'Today', clear: 'Clear' };
+
+    return {
+      days: labels(days, 'weekday', 'long'),
+      daysShort,
+      daysMin: daysShort.map(label => Array.from(label.replace(/\\.$/, '')).slice(0, 2).join('')),
+      months: labels(months, 'month', 'long'),
+      monthsShort: labels(months, 'month', 'short'),
+      today: strings.today,
+      clear: strings.clear,
+      dateFormat: 'yyyy-MM-dd',
+      timeFormat: 'HH:mm',
+      firstDay
+    };
+  }
+
   function calendarDay({ date, cellType }) {
     if (cellType !== 'day') return {};
     const key = dataApi.dateKey(date);
@@ -147,9 +197,11 @@
       notify('The offline calendar could not load. Reload MoLife and try again.', true);
       return;
     }
+    const locale = calendarLocale();
     calendar = new window.AirDatepicker(elements.calendar, {
       inline: true,
-      firstDay: 1,
+      locale,
+      firstDay: locale.firstDay,
       fixedHeight: true,
       startDate: new Date(),
       maxDate: new Date(),
