@@ -91,6 +91,7 @@
     elements.kind.value = 'period';
     elements.flow.value = 'unspecified';
     elements.deleteEntry.hidden = true;
+    elements.flow.disabled = false;
   }
 
   function editEntry(entry) {
@@ -100,6 +101,7 @@
     elements.end.value = entry.end;
     elements.kind.value = entry.kind;
     elements.flow.value = entry.flow;
+    elements.flow.disabled = entry.kind === 'spotting';
     elements.deleteEntry.hidden = false;
     notify('Editing ' + friendly(entry.start) + ' – ' + friendly(entry.end) + '. Save changes or delete this entry.');
   }
@@ -191,7 +193,8 @@
     elements.active.hidden = !records.enabled || blocked;
     elements.enable.disabled = blocked;
     elements.disable.disabled = blocked;
-    elements.clearAll.disabled = blocked || !records.entries.length;
+    elements.clearAll.disabled = !blocked && !records.entries.length;
+    elements.clearAll.textContent = blocked ? 'Delete unreadable local records' : 'Delete all cycle records';
     elements.export.disabled = blocked || !records.entries.length;
     elements.overview.textContent = blocked ? 'LOCAL DATA UNAVAILABLE' :
       records.enabled ? 'ENABLED · THIS DEVICE ONLY' : 'NOT ENABLED';
@@ -285,7 +288,17 @@
     if (persist({ ...records, entries: records.entries.filter(item => item.id !== editingId) }, 'Entry deleted.')) clearEditor();
   });
   elements.clearAll.addEventListener('click', () => {
-    if (blocked || !records.entries.length || !window.confirm('Delete ALL period and spotting records stored on this device for this account? This cannot be undone.')) return;
+    if (!identity || identity !== currentIdentity()) return;
+    if (blocked) {
+      if (!window.confirm('Local cycle data could not be read. Permanently delete the unreadable file for this account from this device? This cannot be undone.')) return;
+      try {
+        dataApi.remove(identity);
+        load();
+        notify('Unreadable local cycle data deleted.');
+      } catch (error) { notify('Could not delete local data: ' + error.message, true); }
+      return;
+    }
+    if (!records.entries.length || !window.confirm('Delete ALL period and spotting records stored on this device for this account? This cannot be undone.')) return;
     if (persist({ ...records, entries: [] }, 'All local cycle records deleted.')) clearEditor();
   });
   elements.export.addEventListener('click', exportRecords);
